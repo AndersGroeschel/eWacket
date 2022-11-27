@@ -1,5 +1,5 @@
 # eWacket
-**a compiler ceritfication of the Wacket Language**
+**a compiler certification of the Wacket Language**
 TODO: formalize things much more
 
 # Main Theorem  
