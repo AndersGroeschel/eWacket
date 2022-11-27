@@ -10,6 +10,7 @@ way to do this yet*)
 | S_Minus: wack -> wack -> wack
 | S_Mult: wack -> wack -> wack
 | S_Div: wack -> wack -> wack
+| S_Eq: wack -> wack -> wack
 
 | S_Bool: bool -> wack
 | S_And: wack -> wack -> wack
@@ -26,6 +27,7 @@ Notation "x + y" := (S_Plus x y).
 Notation "x - y" := (S_Minus x y).
 Notation "x * y" := (S_Mult x y).
 Notation "x / y" := (S_Div x y).
+Notation "x = y" := (S_Eq x y).
 
 Notation "a && b" := (S_And a b).
 Notation "a || b" := (S_Or a b).
@@ -44,13 +46,35 @@ Inductive wasm : Type :=
 .
 
 Inductive observable : Type :=
-(* don't know how we want to define this yet, one option is to *)
+(* don't know how we want to define this yet, one option 
+is to take printed values, another is to take output*)
+| O_Int: nat -> observable
+| O_Bool: bool -> observable
 .
 
 Reserved Notation " t 's==>' n " (at level 50, left associativity).
 Inductive wackEval: wack -> observable -> Prop :=
 
-.
+| E_S_Int: forall n, (S_Int n) s==> (O_Int n)
+| E_S_Bool: forall b, (S_Bool b) s==> (O_Bool b)
+
+| E_S_Plus: forall t1 t2 v1 v2,
+    t1 s==> (O_Int v1) -> t2 s==> (O_Int v2) ->
+    (S_Plus t1 t2) s==> O_Int (v1 + v2)
+| E_S_Minus: forall t1 t2 v1 v2,
+    t1 s==> (O_Int v1) -> t2 s==> (O_Int v2) ->
+    (S_Minus t1 t2) s==> O_Int (v1 - v2)
+| E_S_Mult: forall t1 t2 v1 v2,
+    t1 s==> (O_Int v1) -> t2 s==> (O_Int v2) ->
+    (S_Mult t1 t2) s==> O_Int (v1 * v2)
+| E_S_Div: forall t1 t2 v1 v2,
+    t1 s==> (O_Int v1) -> t2 s==> (O_Int v2) ->
+    (S_Div t1 t2) s==> O_Int (v1 / v2)
+| E_S_Eq: forall t1 t2 v1 v2,
+    t1 s==> (O_Int v1) -> t2 s==> (O_Int v2) ->
+    (S_Mult t1 t2) s==> O_Int (v1 =? v2)
+
+where " t 's==>' n " := (wackEval t n).
 
 
 Reserved Notation " t 'c==>' n " (at level 50, left associativity).
