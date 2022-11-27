@@ -1,11 +1,9 @@
-Require Import String. Local Open Scope string.
 Require Import Arith Bool List ZArith.
+Require Import String. Local Open Scope string.
+
 
 Inductive wack: Type :=
-(* note this needs to be changed to integers, 
-I'm just lazy and haven't figured out the proper 
-way to do this yet*)
-| S_Int: nat -> wack 
+| S_Int: Z -> wack 
 | S_Plus: wack -> wack -> wack
 | S_Minus: wack -> wack -> wack
 | S_Mult: wack -> wack -> wack
@@ -48,7 +46,7 @@ Inductive wasm : Type :=
 Inductive observable : Type :=
 (* don't know how we want to define this yet, one option 
 is to take printed values, another is to take output*)
-| O_Int: nat -> observable
+| O_Int: Z -> observable
 | O_Bool: bool -> observable
 .
 
@@ -72,7 +70,27 @@ Inductive wackEval: wack -> observable -> Prop :=
     (S_Div t1 t2) s==> O_Int (v1 / v2)
 | E_S_Eq: forall t1 t2 v1 v2,
     t1 s==> (O_Int v1) -> t2 s==> (O_Int v2) ->
-    (S_Mult t1 t2) s==> O_Int (v1 =? v2)
+    (S_Eq t1 t2) s==> O_Bool (Z.eqb v1 v2)
+
+| E_S_And: forall t1 t2 b1 b2,
+    t1 s==> (O_Bool b1) -> t2 s==> (O_Bool b2) ->
+    (S_And t1 t2) s==> O_Bool (b1 && b2)
+| E_S_Or: forall t1 t2 b1 b2,
+    t1 s==> (O_Bool b1) -> t2 s==> (O_Bool b2) ->
+    (S_And t1 t2) s==> O_Bool (b1 || b2)
+| E_S_Not: forall t b,
+    t s==> (O_Bool b) ->
+    (S_Not t) s==> O_Bool (negb b)
+
+| E_S_IfElse_True: forall t1 t2 v2, 
+    t1 s==> (O_Bool true) -> 
+    t2 s==> v2 -> 
+    forall t3, (S_IfElse t1 t2 t3) s==> v2
+| E_S_IfElse_False: forall t1 t3 v3, 
+    t1 s==> (O_Bool false) -> 
+    t3 s==> v3 -> 
+    forall t2, (S_IfElse t1 t2 t3) s==> v3
+
 
 where " t 's==>' n " := (wackEval t n).
 
