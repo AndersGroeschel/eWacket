@@ -2,6 +2,16 @@
 **a compiler certification of the Wacket Language**
 TODO: formalize things much more
 
+# Set Up
+- in VS Code make sure the coq project root points to the folder with this _CoqProject in it
+- in the project directory run 
+
+    coq_makefile -f _CoqProject -o Makefile     
+
+- in the project directory create object files by running 
+
+    make all
+
 # Main Theorem  
 *Pulled from [CompCert](https://compcert.org/man/manual001.html)*
 
