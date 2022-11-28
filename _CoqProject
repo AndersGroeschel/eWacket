@@ -2,4 +2,5 @@
 src/observable.v
 src/wacket.v
 src/ewacket.v
+src/compiler.v
 
