@@ -98,7 +98,7 @@ where " t 's==>' n " := (wackEval t n).
 Reserved Notation " t 'c==>' n " (at level 50, left associativity).
 Inductive wasmEval: wasm -> observable -> Prop :=
     
-.
+where " t 'c==>' n " := (wasmEval t n).
 
 
 Inductive compilerResult : Type :=
@@ -116,8 +116,8 @@ Inductive compilerResult : Type :=
 Fixpoint wasmCompiler (source : wack) : compilerResult := Error "not implemented" .
 
 Theorem semanticPreservation:
-    forall (S : wack) (C : wasm), (wasmCompiler S) = (Succ C) ->
-    (* the observable behavior of C improves on one of the allowed observable behaviors of ‍S *).
+    forall (S : wack) (C : wasm) (obs: observable), (wasmCompiler S) = (Succ C) ->
+    S s==> obs -> C c==> obs.
 Proof.
     
 Qed.
