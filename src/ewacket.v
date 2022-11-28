@@ -1,17 +1,12 @@
 Require Import Arith Bool List ZArith.
 Require Import String. Local Open Scope string.
+Require Import wacket.
+Require Import observable.
 
 
 (* this should be taken from an open source project*)
 Inductive wasm : Type :=
 
-.
-
-Inductive observable : Type :=
-(* don't know how we want to define this yet, one option 
-is to take printed values, another is to take output*)
-| O_Int: Z -> observable
-| O_Bool: bool -> observable
 .
 
 Reserved Notation " t 'c==>' n " (at level 50, left associativity).
@@ -24,9 +19,6 @@ Inductive compilerResult : Type :=
 | Succ : wasm -> compilerResult
 | Error : string -> compilerResult
 .
-
-
-
 
 
 
