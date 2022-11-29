@@ -3,7 +3,7 @@ Require Import observable.
 
 
 (* based on the dupe language 
-https://www.cs.umd.edu/class/spring2020/cmsc430/Dupe.html*)
+https://www.cs.umd.edu/class/spring2022/cmsc430/Dupe.html *)
 
 Inductive dupe: Type :=
 | D_Integer: Z -> dupe
@@ -15,6 +15,7 @@ Inductive dupe: Type :=
 .
 
 
+(* this will probably have to be changed because of how integers are represented in binary*)
 Reserved Notation " t 'd==>' n " (at level 50, left associativity).
 Inductive dupeEval: dupe -> observable -> Prop :=
 | E_D_Interger: forall z, (D_Integer z) d==> (O_Int z)
