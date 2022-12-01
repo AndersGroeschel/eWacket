@@ -14,6 +14,35 @@ Inductive dupe: Type :=
 | D_if: dupe -> dupe -> dupe -> dupe
 .
 
+Reserved Notation " t 'd-->' t' " (at level 50, left associativity).
+Inductive dupeStep : dupe -> dupe -> Prop :=
+| D_ST_add1_1: forall t t',
+    t d--> t' -> 
+    (D_add1 t) d--> (D_add1 t')
+| D_ST_add1_2: forall z,
+    (D_add1 (D_Integer z)) d--> (D_Integer (z+1))
+| D_ST_sub1_1: forall t t',
+    t d--> t' -> 
+    (D_sub1 t) d--> (D_sub1 t')
+| D_ST_sub1_2: forall z,
+    (D_sub1 (D_Integer z)) d--> (D_Integer (z-1))
+
+| D_ST_zero_1: forall t t',
+    t d--> t' -> 
+    (D_zero t) d--> (D_zero t')
+| D_ST_zero_2: forall z,
+    (D_zero (D_Integer z)) d--> (D_Boolean (Z.eqb 0 z))
+
+| D_ST_ifTrue: forall t1 t2,
+    (D_if (D_Boolean true) t1 t2) d--> t1
+| D_ST_ifFalse: forall t1 t2,
+    (D_if (D_Boolean false) t1 t2) d--> t2
+| D_ST_if: forall t1 t1' t2 t3,
+    t1 d--> t1' ->
+    (D_if t1 t2 t3) d--> (D_if t1' t2 t3)
+
+where "t 'd-->' t' " := (dupeStep t t').
+
 
 (* this will probably have to be changed because of how integers are represented in binary*)
 Reserved Notation " t 'd==>' n " (at level 50, left associativity).
