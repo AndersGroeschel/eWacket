@@ -14,6 +14,37 @@ Inductive dupe: Type :=
 | D_if: dupe -> dupe -> dupe -> dupe
 .
 
+Inductive dupeResult: Type :=
+| Int: Z -> dupeResult
+| Bool: bool -> dupeResult
+| Error: dupeResult
+.
+
+Fixpoint evalDupe(d : dupe) := match d with 
+| D_Integer z => (Int z)
+| D_Boolean b => (Bool b)
+| D_add1 e => match (evalDupe e) with 
+    | Int i => Int (i + 1)
+    | Bool b => Error
+    | Error => Error
+    end
+| D_sub1 e => match (evalDupe e) with 
+    | Int i => Int (i - 1)
+    | Bool b => Error
+    | Error => Error
+    end
+| D_zero e => match (evalDupe e) with 
+    | Int i => Bool (Z.eqb i 0)
+    | Bool b => Error
+    | Error => Error
+    end
+| D_if e1 e2 e3 => match (evalDupe e1) with 
+    | Int i => Error
+    | Bool b => if b then evalDupe e2  else evalDupe e3 
+    | Error => Error
+    end
+end.
+
 Reserved Notation " t 'd-->' t' " (at level 50, left associativity).
 Inductive dupeStep : dupe -> dupe -> Prop :=
 | D_ST_add1_1: forall t t',
