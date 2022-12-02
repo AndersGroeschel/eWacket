@@ -5,4 +5,5 @@ Inductive observable : Type :=
 is to take printed values, another is to take output*)
 | O_Int: Z -> observable
 | O_Bool: bool -> observable
+| O_Error
 .
