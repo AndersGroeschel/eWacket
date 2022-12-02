@@ -1,6 +1,7 @@
 -R . eWacket
 src/observable.v
 src/wacket.v
+src/wasmLite.v
 src/compiler.v
 
 src/ewacket.v
