@@ -14,34 +14,29 @@ Inductive dupe: Type :=
 | D_if: dupe -> dupe -> dupe -> dupe
 .
 
-Inductive dupeResult: Type :=
-| Int: Z -> dupeResult
-| Bool: bool -> dupeResult
-| Error: dupeResult
-.
 
 Fixpoint evalDupe(d : dupe) := match d with 
-| D_Integer z => (Int z)
-| D_Boolean b => (Bool b)
+| D_Integer z => (O_Int z)
+| D_Boolean b => (O_Bool b)
 | D_add1 e => match (evalDupe e) with 
-    | Int i => Int (i + 1)
-    | Bool b => Error
-    | Error => Error
+    | O_Int i => O_Int (i + 1)
+    | O_Bool b => O_Error
+    | O_Error => O_Error
     end
 | D_sub1 e => match (evalDupe e) with 
-    | Int i => Int (i - 1)
-    | Bool b => Error
-    | Error => Error
+    | O_Int i => O_Int (i - 1)
+    | O_Bool b => O_Error
+    | O_Error => O_Error
     end
 | D_zero e => match (evalDupe e) with 
-    | Int i => Bool (Z.eqb i 0)
-    | Bool b => Error
-    | Error => Error
+    | O_Int i => O_Bool (Z.eqb i 0)
+    | O_Bool b => O_Error
+    | O_Error => O_Error
     end
 | D_if e1 e2 e3 => match (evalDupe e1) with 
-    | Int i => Error
-    | Bool b => if b then evalDupe e2  else evalDupe e3 
-    | Error => Error
+    | O_Int i => O_Error
+    | O_Bool b => if b then evalDupe e2  else evalDupe e3 
+    | O_Error => O_Error
     end
 end.
 
@@ -106,5 +101,10 @@ Inductive dupeEval: dupe -> observable -> Prop :=
     (D_if t_if t_then t_else) d==> v
 
 where " t 'd==>' n " := (dupeEval t n).
+
+Theorem eval_reflect: .
+Proof.
+    
+Qed.
 
 
