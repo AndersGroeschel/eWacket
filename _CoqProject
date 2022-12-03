@@ -1,4 +1,5 @@
 -R . eWacket
+src/typeDefs.v
 src/observable.v
 src/wacket.v
 src/wasmLite.v
