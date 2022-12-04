@@ -1,4 +1,4 @@
-Require Import Arith Bool List ZArith.
+Require Import Bool List ZArith.
 Require Import observable.
 
 
@@ -14,26 +14,35 @@ Inductive dupe: Type :=
 | D_if: dupe -> dupe -> dupe -> dupe
 .
 
+Notation "'(' 'Int' z ')'" := (D_Integer z).
+Notation "'(' 'Bool' '#f' ')'" := (D_Boolean false).
+Notation "'(' 'Bool' '#t' ')'" := (D_Boolean true).
+Notation "'(' 'add1' e ')'" := (D_add1 e).
+Notation "'(' 'sub1' e ')'" := (D_sub1 e).
+Notation "'(' 'zero?' e ')'" := (D_zero e).
+Notation "'(' 'If' b 'Then' t 'Else' e ')'" := (D_if b t e).
+
 
 Fixpoint evalDupe(d : dupe) := match d with 
-| D_Integer z => (O_Int z)
-| D_Boolean b => (O_Bool b)
-| D_add1 e => match (evalDupe e) with 
+| (Int z) => (O_Int z)
+| (Bool #f) => (O_Bool false)
+| (Bool #t) => (O_Bool true)
+| (add1 e) => match (evalDupe e) with 
     | O_Int i => O_Int (i + 1)
     | O_Bool b => O_Error
     | O_Error => O_Error
     end
-| D_sub1 e => match (evalDupe e) with 
+| (sub1 e) => match (evalDupe e) with 
     | O_Int i => O_Int (i - 1)
     | O_Bool b => O_Error
     | O_Error => O_Error
     end
-| D_zero e => match (evalDupe e) with 
+| (zero? e) => match (evalDupe e) with 
     | O_Int i => O_Bool (Z.eqb i 0)
     | O_Bool b => O_Error
     | O_Error => O_Error
     end
-| D_if e1 e2 e3 => match (evalDupe e1) with 
+| (If e1 Then e2 Else e3) => match (evalDupe e1) with 
     | O_Int i => O_Error
     | O_Bool b => if b then evalDupe e2  else evalDupe e3 
     | O_Error => O_Error
@@ -44,29 +53,31 @@ Reserved Notation " t 'd-->' t' " (at level 50, left associativity).
 Inductive dupeStep : dupe -> dupe -> Prop :=
 | D_ST_add1_1: forall t t',
     t d--> t' -> 
-    (D_add1 t) d--> (D_add1 t')
+    (add1 t) d--> (add1 t')
 | D_ST_add1_2: forall z,
-    (D_add1 (D_Integer z)) d--> (D_Integer (z+1))
+    (add1 (Int z)) d--> (Int (z+1))
 | D_ST_sub1_1: forall t t',
     t d--> t' -> 
-    (D_sub1 t) d--> (D_sub1 t')
+    (sub1 t) d--> (sub1 t')
 | D_ST_sub1_2: forall z,
-    (D_sub1 (D_Integer z)) d--> (D_Integer (z-1))
+    (sub1 (Int z)) d--> (Int (z-1))
 
 | D_ST_zero_1: forall t t',
     t d--> t' -> 
-    (D_zero t) d--> (D_zero t')
+    (zero? t) d--> (zero? t')
 | D_ST_zero_2: forall z,
-    (D_zero (D_Integer z)) d--> (D_Boolean (Z.eqb 0 z))
+    (zero? (Int z)) d--> (D_Boolean (Z.eqb 0 z))
 
 | D_ST_ifTrue: forall t1 t2,
-    (D_if (D_Boolean true) t1 t2) d--> t1
+    (D_if (Bool #t) t1 t2) d--> t1
 | D_ST_ifFalse: forall t1 t2,
-    (D_if (D_Boolean false) t1 t2) d--> t2
+    (D_if (Bool #f) t1 t2) d--> t2
 | D_ST_if: forall t1 t1' t2 t3,
     t1 d--> t1' ->
-    (D_if t1 t2 t3) d--> (D_if t1' t2 t3)
+    (If t1 Then t2 Else t3) d--> (If t1' Then t2 Else t3)
 where "t 'd-->' t' " := (dupeStep t t').
+
+
 
 
 (* this will probably have to be changed because of how integers are represented in binary*)
