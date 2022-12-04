@@ -1,6 +1,5 @@
 # eWacket
 **a compiler certification of the Wacket Language**
-TODO: formalize things much more
 
 # Set Up
 - in VS Code make sure the coq project root points to the folder with this _CoqProject in it

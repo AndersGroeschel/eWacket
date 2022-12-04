@@ -14,9 +14,11 @@ Inductive dupe: Type :=
 | D_if: dupe -> dupe -> dupe -> dupe
 .
 
+Notation "#t" := true.
+Notation "#f" := false.
+
 Notation "'(' 'Int' z ')'" := (D_Integer z).
-Notation "'(' 'Bool' '#f' ')'" := (D_Boolean false).
-Notation "'(' 'Bool' '#t' ')'" := (D_Boolean true).
+Notation "'(' 'Bool' b ')'" := (D_Boolean b).
 Notation "'(' 'add1' e ')'" := (D_add1 e).
 Notation "'(' 'sub1' e ')'" := (D_sub1 e).
 Notation "'(' 'zero?' e ')'" := (D_zero e).
@@ -25,8 +27,7 @@ Notation "'(' 'If' b 'Then' t 'Else' e ')'" := (D_if b t e).
 
 Fixpoint evalDupe(d : dupe) := match d with 
 | (Int z) => (O_Int z)
-| (Bool #f) => (O_Bool false)
-| (Bool #t) => (O_Bool true)
+| (Bool b) => (O_Bool b)
 | (add1 e) => match (evalDupe e) with 
     | O_Int i => O_Int (i + 1)
     | O_Bool b => O_Error
@@ -48,6 +49,7 @@ Fixpoint evalDupe(d : dupe) := match d with
     | O_Error => O_Error
     end
 end.
+
 
 Reserved Notation " t 'd-->' t' " (at level 50, left associativity).
 Inductive dupeStep : dupe -> dupe -> Prop :=
@@ -76,7 +78,6 @@ Inductive dupeStep : dupe -> dupe -> Prop :=
     t1 d--> t1' ->
     (If t1 Then t2 Else t3) d--> (If t1' Then t2 Else t3)
 where "t 'd-->' t' " := (dupeStep t t').
-
 
 
 

@@ -1,7 +1,7 @@
 Require Import List ZArith.
 Local Open Scope Z_scope.
 
-Require Import typeDefs.
+Require Import utils.
 
 (* based on definitions laid out here: 
    https://webassembly.github.io/spec/core/intro/index.html *)
@@ -139,10 +139,35 @@ Inductive wasmStepInd: wasmState -> wasmState -> Prop :=
 where "st 'w-->' st'" := (wasmStepInd st st').
 
 
-Theorem wasmLite_deterministic: 
+
+Definition wasmMultistepInd := multi wasmStepInd.
+
+Notation "st 'w-->*' st'" := (wasmMultistepInd st st') (at level 40).
+
+Definition wasmLite_terminates (C : wasmCode) : Prop :=
+    exists stack_final, (C,nil) w-->* (nil,stack_final).
+
+
+Lemma wasmLite_deterministic: 
 forall st st' st'', 
 st w--> st' -> st w--> st'' -> st' = st''.
 Proof.
-    intros. inversion *.
-    
+    intros. 
+    inversion H; subst; 
+    inversion H0; subst; 
+    (try congruence).
 Qed.
+
+(*don't know for sure if we need this yet, 
+        also would need assumption that prog is well typed
+Theorem wasmLite_terminates_always: 
+    forall Code, (wasmLite_terminates Code).
+Proof.
+    intros.
+    unfold wasmLite_terminates.
+    induction Code.
+    - exists nil. apply multi_refl.
+    - inversion IHCode.
+
+Qed.
+*)
