@@ -29,9 +29,9 @@ Inductive wasmValue : Type :=
 
 Notation "'i64.const' x" := (i64_const x) (at level 99).
 Notation "'i32.const' x" := (i32_const x) (at level 99).
-Notation "'i64.add' ( x ) ( y )" := (i64_add) (at level 99).
-Notation "'i64.sub' ( x ) ( y )" := (i64_sub) (at level 99).
-Notation "'i64.eqz' ( x )" := (i64_eqz) (at level 99).
+Notation "'i64.add'" := (i64_add) (at level 99).
+Notation "'i64.sub'" := (i64_sub) (at level 99).
+Notation "'i64.eqz'" := (i64_eqz) (at level 99).
 Notation "'if' '(then' t ) '(else' e )" := (ifThenElse t e) (at level 99).
 
 
@@ -44,34 +44,34 @@ Definition wasmState := (wasmCode * wasmStack)%type.
 Definition wasmStepEval (st : wasmState) : wasmState := match st with 
 (* any time we have trap on top then don't eval*)
 | (_::rest, trap::st') => (rest,trap::st')
-| ((i64_add)::rest, _::trap::st') => (rest,trap::st')
-| ((i64_sub)::rest, _::trap::st') => (rest,trap::st')
+| ((i64.add)::rest, _::trap::st') => (rest,trap::st')
+| ((i64.sub)::rest, _::trap::st') => (rest,trap::st')
 
 (* good eval states*)
-| ((i64_const z)::rest, st) => (rest, (v_i64 z)::st)
-| ((i32_const z)::rest, st) => (rest, (v_i32 z)::st)
-| ((i64_add)::rest, (v_i64 x)::(v_i64 y)::st') 
+| ((i64.const z)::rest, st) => (rest, (v_i64 z)::st)
+| ((i32.const z)::rest, st) => (rest, (v_i32 z)::st)
+| ((i64.add)::rest, (v_i64 x)::(v_i64 y)::st') 
         => (rest, (v_i64 (x + y))::st')
-| ((i64_sub)::rest, (v_i64 x)::(v_i64 y)::st') 
+| ((i64.sub)::rest, (v_i64 x)::(v_i64 y)::st') 
         => (rest, (v_i64 (x - y))::st')
-| ((i64_eqz)::rest, (v_i64 z)::st') 
+| ((i64.eqz)::rest, (v_i64 z)::st') 
         => (rest,(v_i32 (if z =? 0 then 1 else 0))::st')
-| ((ifThenElse t e)::rest, (v_i64 z)::st')
+| ((if (then t) (else e))::rest, (v_i64 z)::st')
         => if Z.eqb 0 z then (e ++ rest, st') else (t ++ rest, st')
-| ((ifThenElse t e)::rest, (v_i32 z)::st')
+| ((if (then t) (else e))::rest, (v_i32 z)::st')
         => if Z.eqb 0 z then (e ++ rest, st') else (t ++ rest, st')
 | (nop::rest, st) => (rest,st)
 | (unreachable::rest, st) => (rest, trap::st)
 
 (* bad eval states*)
-| ((i64_add)::rest, _::st') => (rest,trap::st')
-| ((i64_sub)::rest, _::st') => (rest,trap::st')
-| ((i64_eqz)::rest, _::st') => (rest,trap::st')
+| ((i64.add)::rest, _::st') => (rest,trap::st')
+| ((i64.sub)::rest, _::st') => (rest,trap::st')
+| ((i64.eqz)::rest, _::st') => (rest,trap::st')
 
-| (i64_add::rest, nil) => (rest,trap::nil) 
-| (i64_sub::rest, nil) => (rest,trap::nil) 
-| (i64_eqz::rest, nil) => (rest,trap::nil) 
-| ((ifThenElse _ _)::rest, nil) => (rest,trap::nil) 
+| (i64.add::rest, nil) => (rest,trap::nil) 
+| (i64.sub::rest, nil) => (rest,trap::nil) 
+| (i64.eqz::rest, nil) => (rest,trap::nil) 
+| ((if (then _) (else _))::rest, nil) => (rest,trap::nil) 
 
 | (nil,st) => (nil,st)
 end.
@@ -138,3 +138,11 @@ Inductive wasmStepInd: wasmState -> wasmState -> Prop :=
 
 where "st 'w-->' st'" := (wasmStepInd st st').
 
+
+Theorem wasmLite_deterministic: 
+forall st st' st'', 
+st w--> st' -> st w--> st'' -> st' = st''.
+Proof.
+    intros. inversion *.
+    
+Qed.
