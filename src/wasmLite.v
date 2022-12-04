@@ -39,35 +39,102 @@ Definition wasmStack := list wasmValue.
 
 Definition wasmCode := list wasmInstruction.
 
-Definition wasmStep (C : wasmCode) (st : wasmStack) := match C with 
-| (i64_const z)::rest => (rest, (v_i64 z)::st)
-| (i32_const z)::rest  => (rest, (v_i64 z)::st)
-| (i64_add)::rest => match st with 
-    | (v_i64 x)::(v_i64 y)::st' => (rest, (v_i64 (x + y))::st')
-    | _::trap::st' => (rest,trap::st')
-    | trap::st' => (rest,trap::st')
-    | _ => (rest,trap::st)
-    end
-| (i64_sub)::rest => match st with 
-    | (v_i64 x)::(v_i64 y)::st' => (rest, (v_i64 (x - y))::st')
-    | _::trap::st' => (rest,trap::st')
-    | trap::st' => (rest,trap::st')
-    | _ => (rest,trap::st)
-    end
-| (i64_eqz)::rest => match st with 
-    | (v_i64 z)::st' => (rest,(v_i32 (if z =? 0 then  1 else 0))::st')
-    | trap::st' => (rest,trap::st')
-    | _ => (rest,trap::st)
-    end
-| (ifThenElse t e)::rest => match st with 
-    | (v_i64 z)::st' => if Z.eqb 0 z then (e ++ rest, st') else (t ++ rest, st')
-    | (v_i32 z)::st' => if Z.eqb 0 z then (e ++ rest, st') else (t ++ rest, st')
-    | trap::st' => (rest,trap::st')
-    | st => (rest,trap::st)
-    end
-| nop::rest => (rest,st)
-| unreachable::rest => (rest, trap::st)
-| nil => (nil,st)
+Definition wasmState := (wasmCode * wasmStack)%type.
+
+Definition wasmStepEval (st : wasmState) : wasmState := match st with 
+(* any time we have trap on top then don't eval*)
+| (_::rest, trap::st') => (rest,trap::st')
+| ((i64_add)::rest, _::trap::st') => (rest,trap::st')
+| ((i64_sub)::rest, _::trap::st') => (rest,trap::st')
+
+(* good eval states*)
+| ((i64_const z)::rest, st) => (rest, (v_i64 z)::st)
+| ((i32_const z)::rest, st) => (rest, (v_i32 z)::st)
+| ((i64_add)::rest, (v_i64 x)::(v_i64 y)::st') 
+        => (rest, (v_i64 (x + y))::st')
+| ((i64_sub)::rest, (v_i64 x)::(v_i64 y)::st') 
+        => (rest, (v_i64 (x - y))::st')
+| ((i64_eqz)::rest, (v_i64 z)::st') 
+        => (rest,(v_i32 (if z =? 0 then 1 else 0))::st')
+| ((ifThenElse t e)::rest, (v_i64 z)::st')
+        => if Z.eqb 0 z then (e ++ rest, st') else (t ++ rest, st')
+| ((ifThenElse t e)::rest, (v_i32 z)::st')
+        => if Z.eqb 0 z then (e ++ rest, st') else (t ++ rest, st')
+| (nop::rest, st) => (rest,st)
+| (unreachable::rest, st) => (rest, trap::st)
+
+(* bad eval states*)
+| ((i64_add)::rest, _::st') => (rest,trap::st')
+| ((i64_sub)::rest, _::st') => (rest,trap::st')
+| ((i64_eqz)::rest, _::st') => (rest,trap::st')
+
+| (i64_add::rest, nil) => (rest,trap::nil) 
+| (i64_sub::rest, nil) => (rest,trap::nil) 
+| (i64_eqz::rest, nil) => (rest,trap::nil) 
+| ((ifThenElse _ _)::rest, nil) => (rest,trap::nil) 
+
+| (nil,st) => (nil,st)
 end.
 
+Reserved Notation "st 'w-->' st'" (at level 50, left associativity).
+
+Inductive wasmStepInd: wasmState -> wasmState -> Prop :=
+| W_ST_64Const: forall C st z C',
+    C = (i64_const z)::C' ->
+    (C,st) w--> (C',((v_i64 z)::st))
+| W_ST_32Const: forall C st z C',
+    C = (i32_const z)::C' ->
+    (C, st) w--> (C', ((v_i32 z)::st))
+| W_ST_64Add: forall C C' st x y st',
+    C = i64_add::C' ->
+    st = (v_i64 x)::(v_i64 y)::st' ->
+    (C, st) w--> (C', (v_i64 (x + y))::st')
+| W_ST_64Sub: forall C C' st x y st',
+    C = i64_sub::C' ->
+    st = (v_i64 x)::(v_i64 y)::st' ->
+    (C, st) w--> (C', (v_i64 (x - y))::st')
+
+| W_ST_64EqzTrue: forall C C' st z st',
+    C = i64_eqz::C' ->
+    st = (v_i64 z)::st' ->
+    (z = 0) -> 
+    (C, st) w--> (C', (v_i32 1)::st')
+| W_ST_64EqzFalse: forall C C' st z st',
+    C = i64_eqz::C' ->
+    st = (v_i64 z)::st' ->
+    ~(z = 0) -> 
+    (C, st) w--> (C', (v_i32 0)::st')
+
+
+| W_ST_64IfTrue: forall C Ct Ce C' st z st',
+    C = (ifThenElse Ct Ce)::C' ->
+    st = (v_i64 z)::st' ->
+    ~(z = 0) ->
+    (C, st) w--> (Ct ++ C', st')
+| W_ST_64IfFalse: forall C Ct Ce C' st z st',
+    C = (ifThenElse Ct Ce)::C' ->
+    st = (v_i64 z)::st' ->
+    (z = 0) ->
+    (C, st) w--> (Ce ++ C', st')
+
+| W_ST_32IfTrue: forall C Ct Ce C' st z st',
+    C = (ifThenElse Ct Ce)::C' ->
+    st = (v_i32 z)::st' ->
+    ~(z = 0) ->
+    (C, st) w--> (Ct ++ C', st')
+| W_ST_32IfFalse: forall C Ct Ce C' st z st',
+    C = (ifThenElse Ct Ce)::C' ->
+    st = (v_i32 z)::st' ->
+    (z = 0) ->
+    (C, st) w--> (Ce ++ C', st')
+
+| W_ST_nop: forall C C' st,
+    C = nop::C' ->
+    (C,st) w--> (C',st)
+
+| W_ST_unreachable: forall C C' st,
+    C = unreachable::C' ->
+    (C,st) w--> (C',trap::st)
+
+where "st 'w-->' st'" := (wasmStepInd st st').
 
