@@ -66,7 +66,6 @@ Inductive dupeStep : dupe -> dupe -> Prop :=
 | D_ST_if: forall t1 t1' t2 t3,
     t1 d--> t1' ->
     (D_if t1 t2 t3) d--> (D_if t1' t2 t3)
-
 where "t 'd-->' t' " := (dupeStep t t').
 
 
@@ -101,10 +100,3 @@ Inductive dupeEval: dupe -> observable -> Prop :=
     (D_if t_if t_then t_else) d==> v
 
 where " t 'd==>' n " := (dupeEval t n).
-
-Theorem eval_reflect: .
-Proof.
-    
-Qed.
-
-
