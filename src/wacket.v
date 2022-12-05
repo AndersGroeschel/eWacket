@@ -1,5 +1,5 @@
 Require Import Bool List ZArith.
-Require Import observable.
+
 
 
 (* based on the dupe language 
@@ -88,7 +88,7 @@ where "t 'd-->' t' " := (dupeStep t t').
 
 (* this will probably have to be changed because of how integers are represented in binary*)
 Reserved Notation " t 'd==>' n " (at level 50, left associativity).
-Inductive dupeEval: dupe -> observable -> Prop :=
+Inductive dupeEval: dupe -> dupeResult -> Prop :=
 | E_D_Interger: forall z, (D_Integer z) d==> (DR_Int z)
 | E_D_Boolean: forall b, (D_Boolean b) d==> (DR_Bool b)
 
