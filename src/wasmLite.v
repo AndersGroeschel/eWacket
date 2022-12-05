@@ -158,6 +158,34 @@ Proof.
     (try congruence).
 Qed.
 
+Theorem add_instruction_ok:
+forall C v instr v',
+(C,nil) w-->* (nil,v) ->
+(instr::nil,v) w--> (nil,v') ->
+(C ++ (instr::nil),nil) w-->* (nil,v').
+Proof.
+    Admitted.
+    (*intros.
+    inversion H0; subst.
+    - inversion H2; subst. clear H2.
+Qed.*)
+
+
+Theorem instruction_order:
+forall C C' v v',
+(C , nil) w-->* (nil,v) ->
+(C',v) w-->* (nil,v') ->
+(C++C',nil) w-->* (nil,v').
+Proof.
+    Admitted.
+    (*
+    induction C'; intros.
+    - rewrite app_nil_r. inversion H0; subst.
+        + assumption.
+        + inversion H1; discriminate.
+    - 
+*)
+
 (*don't know for sure if we need this yet, 
         also would need assumption that prog is well typed
 Theorem wasmLite_terminates_always: 
