@@ -88,23 +88,16 @@ Inductive wasmStepInd: wasmState -> wasmState -> Prop :=
 | W_ST_64Add: forall C C' st x y st',
     C = i64_add::C' ->
     st = (v_i64 x)::(v_i64 y)::st' ->
-    (C, st) w--> (C', (v_i64 (x + y))::st')
+    (C, st) w--> (C', (v_i64 (y + x))::st')
 | W_ST_64Sub: forall C C' st x y st',
     C = i64_sub::C' ->
     st = (v_i64 x)::(v_i64 y)::st' ->
-    (C, st) w--> (C', (v_i64 (x - y))::st')
+    (C, st) w--> (C', (v_i64 (y - x))::st')
 
-| W_ST_64EqzTrue: forall C C' st z st',
+| W_ST_64Eqz: forall C C' st z st',
     C = i64_eqz::C' ->
     st = (v_i64 z)::st' ->
-    (z = 0) -> 
-    (C, st) w--> (C', (v_i32 1)::st')
-| W_ST_64EqzFalse: forall C C' st z st',
-    C = i64_eqz::C' ->
-    st = (v_i64 z)::st' ->
-    ~(z = 0) -> 
-    (C, st) w--> (C', (v_i32 0)::st')
-
+    (C, st) w--> (C', (v_i32 (if z =? 0 then 1 else 0))::st')
 
 | W_ST_64IfTrue: forall C Ct Ce C' st z st',
     C = (ifThenElse Ct Ce)::C' ->
@@ -155,6 +148,10 @@ Proof.
     intros. 
     inversion H; subst; 
     inversion H0; subst; 
+    (try congruence);
+    destruct z;
+    destruct z0; 
+    simpl; 
     (try congruence).
 Qed.
 

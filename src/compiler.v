@@ -13,7 +13,7 @@ Fixpoint compile_unsafe (source : dupe) := match source with
 | D_Integer z => ((i64.const z)::nil)
 | D_Boolean b => ((i32.const (if b then 1 else 0))::nil)
 | D_add1 e => (compile_unsafe e) ++ ((i64.const 1)::(i64.add)::nil)
-| D_sub1 e => (compile_unsafe e) ++ ((i64.const 1)::(i64.add)::nil)
+| D_sub1 e => (compile_unsafe e) ++ ((i64.const 1)::(i64.sub)::nil)
 | D_zero e => (compile_unsafe e) ++ (i64.eqz::nil)
 | D_if b t e => 
     (compile_unsafe b) ++ 
@@ -21,4 +21,11 @@ Fixpoint compile_unsafe (source : dupe) := match source with
 end.
 
 
+Theorem existsCompiledForDupe: 
+    forall d: dupe, exists (w : wasmCode), compile_unsafe d = w.
+Proof.
+    intros. 
+    exists (compile_unsafe d).
+    reflexivity.
+Qed.
 
