@@ -15,59 +15,9 @@ match res with
 | DR_Error => trap
 end.
 
-
-Ltac compileNil := match goal with 
-| [ H0: nil = compile_unsafe _ ++ _ |- _] =>
-    symmetry in H0;
-    apply app_eq_nil in H0; 
-    destruct H0; subst;simpl
-| [ H0: compile_unsafe _ ++ _ = nil |- _] =>
-    apply app_eq_nil in H0; 
-    destruct H0; subst;simpl
-| _ => fail
-end.
-
-Ltac compileNotPossible := 
-match goal with 
-| [ H0: compile_unsafe ?src = nil, H1: ?src d==> _|- _] => 
-    inversion H1; subst;
-    try (discriminate);
-    try (simpl in H0; apply app_eq_nil in H0;
-    destruct H0; discriminate)
-| _ => fail
-end.
-
-
-Ltac destructCompile H := 
-simpl in H;
-apply app_eq_app in H;
-do 3 destruct H;
-[
-    rewrite app_nil_l in H;
-    simpl
-    | (try compileNil);(try compileNotPossible)
-].
-
-
-(* does not work for some reason*)
-Ltac refineInductiveHypothesis := match goal with 
-| [ H0: compile_unsafe ?src = ?comp,
-    _ : (?src d==> ?val),
-    IH: (forall (c : list wasmInstruction) (d : dupeResult), 
-    compile_unsafe ?src = c -> ?src d==> d -> _)
-    |- _]=> apply (IH ?comp ?val) in H0; (try assumption)
-end.
-
 Ltac applyInstructionOrder := 
 eapply instruction_order;
 eauto.
-
-
-Ltac doesBoolStep := 
-simpl;
-repeat ( econstructor;[simpl; do 2 constructor | simpl]);
-try (do 2 constructor)
-.
 
 Ltac doesArithStep := 
 simpl;

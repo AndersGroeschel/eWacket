@@ -26,7 +26,6 @@ Inductive wasmValue : Type :=
 | trap
 .
 
-
 Notation "'i64.const' x" := (i64_const x) (at level 99).
 Notation "'i32.const' x" := (i32_const x) (at level 99).
 Notation "'i64.add'" := (i64_add) (at level 99).
@@ -40,41 +39,6 @@ Definition wasmStack := list wasmValue.
 Definition wasmCode := list wasmInstruction.
 
 Definition wasmState := (wasmCode * wasmStack)%type.
-
-Definition wasmStepEval (st : wasmState) : wasmState := match st with 
-(* any time we have trap on top then don't eval*)
-| (_::rest, trap::st') => (rest,trap::st')
-| ((i64.add)::rest, _::trap::st') => (rest,trap::st')
-| ((i64.sub)::rest, _::trap::st') => (rest,trap::st')
-
-(* good eval states*)
-| ((i64.const z)::rest, st) => (rest, (v_i64 z)::st)
-| ((i32.const z)::rest, st) => (rest, (v_i32 z)::st)
-| ((i64.add)::rest, (v_i64 x)::(v_i64 y)::st') 
-        => (rest, (v_i64 (x + y))::st')
-| ((i64.sub)::rest, (v_i64 x)::(v_i64 y)::st') 
-        => (rest, (v_i64 (x - y))::st')
-| ((i64.eqz)::rest, (v_i64 z)::st') 
-        => (rest,(v_i32 (if z =? 0 then 1 else 0))::st')
-| ((if (then t) (else e))::rest, (v_i64 z)::st')
-        => if Z.eqb 0 z then (e ++ rest, st') else (t ++ rest, st')
-| ((if (then t) (else e))::rest, (v_i32 z)::st')
-        => if Z.eqb 0 z then (e ++ rest, st') else (t ++ rest, st')
-| (nop::rest, st) => (rest,st)
-| (unreachable::rest, st) => (rest, trap::st)
-
-(* bad eval states*)
-| ((i64.add)::rest, _::st') => (rest,trap::st')
-| ((i64.sub)::rest, _::st') => (rest,trap::st')
-| ((i64.eqz)::rest, _::st') => (rest,trap::st')
-
-| (i64.add::rest, nil) => (rest,trap::nil) 
-| (i64.sub::rest, nil) => (rest,trap::nil) 
-| (i64.eqz::rest, nil) => (rest,trap::nil) 
-| ((if (then _) (else _))::rest, nil) => (rest,trap::nil) 
-
-| (nil,st) => (nil,st)
-end.
 
 Reserved Notation "st 'w-->' st'" (at level 50, left associativity).
 
@@ -155,19 +119,6 @@ Proof.
     (try congruence).
 Qed.
 
-Theorem add_instruction_ok:
-forall C v instr v',
-(C,nil) w-->* (nil,v) ->
-(instr::nil,v) w--> (nil,v') ->
-(C ++ (instr::nil),nil) w-->* (nil,v').
-Proof.
-    Admitted.
-    (*intros.
-    inversion H0; subst.
-    - inversion H2; subst. clear H2.
-Qed.*)
-
-
 Theorem instruction_order:
 forall C C' v v',
 (C , nil) w-->* (nil,v) ->
@@ -175,24 +126,3 @@ forall C C' v v',
 (C++C',nil) w-->* (nil,v').
 Proof.
     Admitted.
-    (*
-    induction C'; intros.
-    - rewrite app_nil_r. inversion H0; subst.
-        + assumption.
-        + inversion H1; discriminate.
-    - 
-*)
-
-(*don't know for sure if we need this yet, 
-        also would need assumption that prog is well typed
-Theorem wasmLite_terminates_always: 
-    forall Code, (wasmLite_terminates Code).
-Proof.
-    intros.
-    unfold wasmLite_terminates.
-    induction Code.
-    - exists nil. apply multi_refl.
-    - inversion IHCode.
-
-Qed.
-*)

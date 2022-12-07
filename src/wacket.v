@@ -56,36 +56,6 @@ Fixpoint evalDupe(d : dupe) := match d with
 end.
 
 
-Reserved Notation " t 'd-->' t' " (at level 50, left associativity).
-Inductive dupeStep : dupe -> dupe -> Prop :=
-| D_ST_add1_1: forall t t',
-    t d--> t' -> 
-    (add1 t) d--> (add1 t')
-| D_ST_add1_2: forall z,
-    (add1 (Int z)) d--> (Int (z+1))
-| D_ST_sub1_1: forall t t',
-    t d--> t' -> 
-    (sub1 t) d--> (sub1 t')
-| D_ST_sub1_2: forall z,
-    (sub1 (Int z)) d--> (Int (z-1))
-
-| D_ST_zero_1: forall t t',
-    t d--> t' -> 
-    (zero? t) d--> (zero? t')
-| D_ST_zero_2: forall z,
-    (zero? (Int z)) d--> (D_Boolean (Z.eqb 0 z))
-
-| D_ST_ifTrue: forall t1 t2,
-    (D_if (Bool #t) t1 t2) d--> t1
-| D_ST_ifFalse: forall t1 t2,
-    (D_if (Bool #f) t1 t2) d--> t2
-| D_ST_if: forall t1 t1' t2 t3,
-    t1 d--> t1' ->
-    (If t1 Then t2 Else t3) d--> (If t1' Then t2 Else t3)
-where "t 'd-->' t' " := (dupeStep t t').
-
-
-
 (* this will probably have to be changed because of how integers are represented in binary*)
 Reserved Notation " t 'd==>' n " (at level 50, left associativity).
 Inductive dupeEval: dupe -> dupeResult -> Prop :=
