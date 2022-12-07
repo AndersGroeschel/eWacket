@@ -40,7 +40,6 @@ end.
 
 Ltac destructCompile H := 
 simpl in H;
-rewrite <- (app_nil_l) in H;
 apply app_eq_app in H;
 do 3 destruct H;
 [
@@ -60,7 +59,6 @@ Ltac refineInductiveHypothesis := match goal with
 end.
 
 Ltac applyInstructionOrder := 
-subst;
 eapply instruction_order;
 eauto.
 
@@ -99,7 +97,7 @@ Theorem semanticPreservation:
     (compiled,nil) w-->* ((nil, (dupeResult_to_wasmVal dupeResult)::nil)).
 Proof.
     induction source; intros;
-    inversion H0.
+    inversion H0;subst.
     (* int *)
     - unfoldCompiled H.
         doesBaseStep.
@@ -108,95 +106,83 @@ Proof.
         destruct b;
         doesBaseStep.
     (* add 1*)
-    - unfoldCompiled H.
-    
-        rewrite <- H3 in H0. 
-        clear t H1 H3.
-        destructCompile H.
-        simpl.
-        apply (IHsource x (DR_Int z)) in H. 
-        + applyInstructionOrder.
+    - apply add1_ImpliesSource in H. 
+        do 2 destruct H. 
+        subst.
+        apply (IHsource x (DR_Int z)) in H;
+        simpl; (simpl in H).
+        +  applyInstructionOrder.
             doesArithStep.
         + assumption.
     (* sub1 *)
-    - rewrite <- H3 in H0.
-        clear t H1 H3.
-        destructCompile H.
-        apply (IHsource x (DR_Int z)) in H.
-        + applyInstructionOrder.
+    - apply sub1_ImpliesSource in H. 
+        do 2 destruct H. 
+        subst.
+        apply (IHsource x (DR_Int z)) in H;
+        simpl; (simpl in H).
+        +  applyInstructionOrder.
             doesArithStep.
         + assumption.
     (* eqz *)
-    - rewrite <- H3 in H0.
-        clear t H1 H3.
-        destructCompile H.
-        apply (IHsource x (DR_Int z)) in H. 
+    - apply zero_ImpliesSource in H. 
+        do 2 destruct H. 
+        subst.
+        apply (IHsource x (DR_Int z)) in H;
+        simpl; (simpl in H).
         + applyInstructionOrder.
-            destruct z; doesBoolStep.
+            econstructor.
+            * apply W_ST_64Eqz; constructor.
+            * destruct (z =? 0); constructor.
         + assumption.
     (* if false*)
-    - rewrite <- H3 in *.
-        clear H1 H2 H3 H4 t_if t_then t_else.
-        destructCompile H.
-        remember H.
-        clear Heqe.
+    - apply (ifBool_ImpliesSource source1 source2 source3 compiled #f) in H. 
+        do 3 destruct H.
+        destruct H.
+        destruct H1.
+        destruct H2.
+        subst.
         apply (IHsource1 x (DR_Bool #f)) in H.
         + applyInstructionOrder.
-            assert (Hcompile3: exists (compile3:wasmCode), compile_unsafe source3 = compile3);
-            (try (apply existsCompiledForDupe)); try (destruct Hcompile3).
-            rewrite H1.
-            destruct v; econstructor;
-                (try (eapply W_ST_32IfFalse; (constructor||reflexivity)));
+            destruct dupeResult; econstructor;
+                (try (eapply W_ST_32IfFalse; (constructor||(apply Z.eqb_neq; reflexivity)||reflexivity)));
                 (try simpl; 
-                    (apply (IHsource3 x (DR_Int z)) in H1 ||
-                    apply (IHsource3 x (DR_Bool b)) in H1 ||
-                    apply (IHsource3 x (DR_Error)) in H1)
-                ); 
-            (try (applyInstructionOrder; constructor));
-            (try assumption).
-        + assumption.
-    (* if true *)
-    - rewrite <- H3 in *.
-        clear H1 H2 H3 H4 t_if t_then t_else.
-        destructCompile H.
-        remember H.
-        clear Heqe.
-        apply (IHsource1 x (DR_Bool #t)) in H.
-        + applyInstructionOrder.
-            assert (Hcompile2: exists (compile3:wasmCode), compile_unsafe source2 = compile3);
-            (try (apply existsCompiledForDupe)); try (destruct Hcompile2). rewrite H1.  
-            destruct v; econstructor;
-                (try (eapply W_ST_32IfTrue; (constructor||(apply Z.eqb_neq; reflexivity))));
-                (try simpl; 
-                    (apply (IHsource2 x (DR_Int z)) in H1 ||
-                    apply (IHsource2 x (DR_Bool b)) in H1 ||
-                    apply (IHsource2 x (DR_Error)) in H1)
+                    (apply (IHsource3 x1 (DR_Int z)) in H6 ||
+                    apply (IHsource3 x1 (DR_Bool b)) in H6 ||
+                    apply (IHsource3 x1 (DR_Error)) in H6)
                 );
             (try (applyInstructionOrder; constructor));
             (try assumption).
         + assumption.
-    - rewrite <- H3 in *.
-    clear H1 H2 H3 H4 t_if t_then t_else.
-    destructCompile H.
-    remember H.
-    clear Heqe.
-    apply (IHsource1 x (DR_Int z)) in H.
-    + applyInstructionOrder.
-        assert (Hcompile2: exists (compile3:wasmCode), compile_unsafe source2 = compile3);
-        (try (apply existsCompiledForDupe)); try (destruct Hcompile2). 
-        rewrite H1.  
-        destruct v; econstructor;
-            (try (eapply W_ST_32IfTrue; (constructor||(apply Z.eqb_neq; reflexivity))));
-            (try simpl; 
-                (apply (IHsource2 x (DR_Int z0)) in H1 ||
-                apply (IHsource2 x (DR_Bool b)) in H1 ||
-                apply (IHsource2 x (DR_Error)) in H1)
-            );
-        (try (applyInstructionOrder; constructor));
-        (try assumption).
-        * eapply W_ST_32IfTrue. 
-            -- constructor.
-            -- (* compiler error  if with int*) constructor.
-    + assumption.
-Admitted.
+        + assumption.
+    (* if true *)
+    - apply (ifBool_ImpliesSource source1 source2 source3 compiled #t) in H. 
+        do 3 destruct H.
+        destruct H.
+        destruct H1.
+        destruct H2.
+        subst.
+        apply (IHsource1 x (DR_Bool #t)) in H.
+        + applyInstructionOrder.
+            destruct dupeResult; econstructor;
+                (try (eapply W_ST_32IfTrue; (constructor||(apply Z.eqb_neq; reflexivity)||reflexivity)));
+                (try simpl; 
+                    (apply (IHsource2 x0 (DR_Int z)) in H6 ||
+                    apply (IHsource2 x0 (DR_Bool b)) in H6 ||
+                    apply (IHsource2 x0 (DR_Error)) in H6)
+                );
+            (try (applyInstructionOrder; constructor));
+            (try assumption).
+        + assumption.
+        + assumption.
+
+    (* if int *)
+    - apply (ifInt_ImpliesSource source1 source2 source3 compiled z) in H. 
+        do 3 destruct H.
+        destruct H.
+        destruct H1.
+        destruct H2.
+        subst.
+        + apply (IHsource2 x0 dupeResult) in H6; assumption.
+        + assumption.
+Qed.
 
