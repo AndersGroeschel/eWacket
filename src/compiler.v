@@ -78,6 +78,8 @@ Fixpoint compile_typed (source: dupe) := match source with
 end.
 
 
+
+
 (* a compiler from dupe to wasm, does not do any sort of type checking
      and can produce wasm code that can't transition *)
 Fixpoint compile_unsafe (source : dupe) := match source with 
@@ -97,12 +99,48 @@ Definition compile (source :dupe) := match compile_typed source with
 | (_,Error err) => Error err
 end.
 
-
-Theorem existsUnsafeCompiledForDupe: 
-    forall d: dupe, exists (w : wasmCode), compile_unsafe d = w.
+(* need these lemmas *)
+Lemma add1_ImpliesSource :
+forall src compiled, 
+    compile (add1 src) = Succ compiled ->
+    exists code, ((compile src = Succ code) /\ (compiled = code ++ ((i64.const 1)::(i64.add)::nil))).
 Proof.
-    intros. 
-    exists (compile_unsafe d).
-    reflexivity.
-Qed.
+    Admitted.
+
+Lemma sub1_ImpliesSource :
+forall src compiled, 
+    compile (sub1 src) = Succ compiled ->
+    exists code, ((compile src = Succ code) /\ (compiled = code ++ ((i64.const 1)::(i64.sub)::nil))).
+Proof.
+    Admitted.
+
+Lemma zero_ImpliesSource :
+forall src compiled, 
+    compile (zero? src) = Succ compiled ->
+    exists code, ((compile src = Succ code) /\ (compiled = code ++ (i64.eqz::nil))).
+Proof.
+    Admitted.
+
+Lemma ifBool_ImpliesSource :
+forall srcIf srcThen srcElse compiled b, 
+    compile (If srcIf Then srcThen Else srcElse) = Succ compiled ->
+    srcIf d==> (DR_Bool b)->
+    exists codeIf codeThen codeElse, 
+        ((compile srcIf = Succ codeIf) /\ (compile srcThen = Succ codeThen) /\ (compile srcElse = Succ codeElse) /\
+        (compiled = codeIf ++ ((ifThenElse codeThen codeElse)::nil))).
+Proof.
+    Admitted.
+
+
+Lemma ifInt_ImpliesSource :
+forall srcIf srcThen srcElse compiled z, 
+    compile (If srcIf Then srcThen Else srcElse) = Succ compiled ->
+    srcIf d==> (DR_Int z)->
+    exists codeIf codeThen codeElse, 
+        ((compile srcIf = Succ codeIf) /\ (compile srcThen = Succ codeThen) /\ (compile srcElse = Succ codeElse) /\
+        (compiled = codeThen)).
+Proof.
+    Admitted.
+
+
 
