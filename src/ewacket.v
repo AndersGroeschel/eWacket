@@ -52,17 +52,17 @@ Ltac destructBools := match goal with
 | [|- context[if ?x then _ else _] ] => destruct x eqn: eq
 end.
 
-Ltac removeNils := match goal with
+Ltac removeListNils := match goal with
 | [|- context[_ ++ nil] ] => rewrite app_nil_r
 | [|- context[nil ++ _] ] => rewrite app_nil_l
 | [H: context[_ ++ nil] |- _ ] => rewrite app_nil_r  in H
 | [H: context[nil ++ _] |- _ ] => rewrite app_nil_l  in H
 end.
 
-Ltac stepCompletes := 
-    (reflexivity || 
-    (apply Z.eqb_neq;reflexivity))
-.
+Ltac stepCompletes := (
+    reflexivity || 
+    (apply Z.eqb_neq;reflexivity)
+).
 
 Ltac doesSingleStep := 
     ( (eapply W_ST_64Const; stepCompletes)
@@ -82,7 +82,7 @@ Ltac doesStep :=
 simpl;
 repeat (
     (repeat destructBools);
-    (repeat removeNils);
+    (repeat removeListNils); 
     (try assumption);
     match goal with 
     | [|- _ w-->* _ ]=> econstructor

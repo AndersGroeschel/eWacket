@@ -120,8 +120,8 @@ Proof.
 Qed.
 
 Theorem instruction_order:
-forall C C' v v',
-(C , nil) w-->* (nil,v) ->
+forall C C' s v v',
+(C , s) w-->* (nil,v) ->
 (C',v) w-->* (nil,v') ->
 (C++C',nil) w-->* (nil,v').
 Proof.
