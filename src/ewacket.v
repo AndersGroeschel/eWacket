@@ -19,23 +19,78 @@ Ltac applyInstructionOrder :=
 eapply instruction_order;
 eauto.
 
-Ltac doesArithStep := 
-simpl;
-(repeat (econstructor; [do 2 constructor |]));
-try (apply multi_refl);
-try (rewrite Z.add_comm; apply multi_refl)
-.
+(* does not work *)
+Ltac refineInductiveHypothesis := 
+match goal with 
+|   H0 : compile ?source = Succ ?compiled,
+    H1 : ?source d==> ?value,
+    IH : forall (c: wasmCode) (d: dupeResult),
+        compile ?source = Succ c ->
+        ?source d==> d -> _
+    |- _ => specialize ((IH ?compiler ?value) H0)
+| _ => fail
+end.
 
 Ltac unfoldCompiled H :=
     unfold compile in H; 
     simpl in H;
     inversion H. 
 
-Ltac doesBaseStep := 
-    simpl;
-    econstructor; 
-    constructor; 
-    reflexivity.
+Ltac logicAuto :=
+match goal with 
+| H: _ /\ _ |- _ => destruct H
+| H: _ \/ _ |- _ => destruct H
+| H: exists _, _ |- _ => destruct H
+| _ => fail
+end.
+
+Ltac destructBools := match goal with 
+| [H : ?x = true |- context[if ?x then _ else _] ] => rewrite H
+| [H : ?x = false |- context[if ?x then _ else _] ] => rewrite H
+| [H : true = ?x |- context[if ?x then _ else _] ] => rewrite H
+| [H : false = ?x |- context[if ?x then _ else _] ] => rewrite H
+| [|- context[if ?x then _ else _] ] => destruct x eqn: eq
+end.
+
+Ltac removeNils := match goal with
+| [|- context[_ ++ nil] ] => rewrite app_nil_r
+| [|- context[nil ++ _] ] => rewrite app_nil_l
+| [H: context[_ ++ nil] |- _ ] => rewrite app_nil_r  in H
+| [H: context[nil ++ _] |- _ ] => rewrite app_nil_l  in H
+end.
+
+Ltac stepCompletes := 
+    (reflexivity || 
+    (apply Z.eqb_neq;reflexivity))
+.
+
+Ltac doesSingleStep := 
+    ( (eapply W_ST_64Const; stepCompletes)
+    || (eapply W_ST_32Const; stepCompletes)
+    || (eapply W_ST_64Add; stepCompletes)
+    || (eapply W_ST_64Sub; stepCompletes)
+    || (eapply W_ST_64Eqz; stepCompletes)
+    || (eapply W_ST_64IfTrue; stepCompletes)
+    || (eapply W_ST_64IfFalse; stepCompletes)
+    || (eapply W_ST_32IfTrue; stepCompletes)
+    || (eapply W_ST_32IfFalse; stepCompletes)
+    || (eapply W_ST_nop; stepCompletes)
+    || (eapply W_ST_unreachable; stepCompletes)
+    )
+.
+Ltac doesStep :=
+simpl;
+repeat (
+    (repeat destructBools);
+    (repeat removeNils);
+    (try assumption);
+    match goal with 
+    | [|- _ w-->* _ ]=> econstructor
+    | [|- multi wasmStepInd _ _] => econstructor
+    | [|- _ w--> _] => doesSingleStep
+    end
+).
+
 
 (* going to need that dupe is well typed, 
 and therefor evalDupe cannot produce an error, 
@@ -50,87 +105,47 @@ Proof.
     inversion H0;subst.
     (* int *)
     - unfoldCompiled H.
-        doesBaseStep.
+        doesStep.
     (* bool *)
     - unfoldCompiled H.
-        destruct b;
-        doesBaseStep.
+        doesStep.
     (* add 1*)
     - apply add1_ImpliesSource in H. 
-        do 2 destruct H. 
+        repeat logicAuto.
         subst.
-        apply (IHsource x (DR_Int z)) in H;
-        simpl; (simpl in H).
-        +  applyInstructionOrder.
-            doesArithStep.
-        + assumption.
+        applyInstructionOrder.
+        doesStep.
     (* sub1 *)
     - apply sub1_ImpliesSource in H. 
-        do 2 destruct H. 
+        repeat logicAuto.
         subst.
-        apply (IHsource x (DR_Int z)) in H;
-        simpl; (simpl in H).
-        +  applyInstructionOrder.
-            doesArithStep.
-        + assumption.
+        applyInstructionOrder.
+        doesStep.
     (* eqz *)
     - apply zero_ImpliesSource in H. 
-        do 2 destruct H. 
+        repeat logicAuto.
         subst.
-        apply (IHsource x (DR_Int z)) in H;
-        simpl; (simpl in H).
-        + applyInstructionOrder.
-            econstructor.
-            * apply W_ST_64Eqz; constructor.
-            * destruct (z =? 0); constructor.
-        + assumption.
+        applyInstructionOrder.
+        doesStep.
     (* if false*)
     - apply (ifBool_ImpliesSource source1 source2 source3 compiled #f) in H. 
-        do 3 destruct H.
-        destruct H.
-        destruct H1.
-        destruct H2.
+        repeat logicAuto.
         subst.
-        apply (IHsource1 x (DR_Bool #f)) in H.
-        + applyInstructionOrder.
-            destruct dupeResult; econstructor;
-                (try (eapply W_ST_32IfFalse; (constructor||(apply Z.eqb_neq; reflexivity)||reflexivity)));
-                (try simpl; 
-                    (apply (IHsource3 x1 (DR_Int z)) in H6 ||
-                    apply (IHsource3 x1 (DR_Bool b)) in H6 ||
-                    apply (IHsource3 x1 (DR_Error)) in H6)
-                );
-            (try (applyInstructionOrder; constructor));
-            (try assumption).
-        + assumption.
+        + apply (IHsource3 x1 dupeResult) in H6.
+            * applyInstructionOrder. doesStep.
+            * assumption.
         + assumption.
     (* if true *)
     - apply (ifBool_ImpliesSource source1 source2 source3 compiled #t) in H. 
-        do 3 destruct H.
-        destruct H.
-        destruct H1.
-        destruct H2.
+        repeat logicAuto.
         subst.
-        apply (IHsource1 x (DR_Bool #t)) in H.
-        + applyInstructionOrder.
-            destruct dupeResult; econstructor;
-                (try (eapply W_ST_32IfTrue; (constructor||(apply Z.eqb_neq; reflexivity)||reflexivity)));
-                (try simpl; 
-                    (apply (IHsource2 x0 (DR_Int z)) in H6 ||
-                    apply (IHsource2 x0 (DR_Bool b)) in H6 ||
-                    apply (IHsource2 x0 (DR_Error)) in H6)
-                );
-            (try (applyInstructionOrder; constructor));
-            (try assumption).
+        + apply (IHsource2 x0 dupeResult) in H6.
+            * applyInstructionOrder. doesStep.
+            * assumption.
         + assumption.
-        + assumption.
-
     (* if int *)
     - apply (ifInt_ImpliesSource source1 source2 source3 compiled z) in H. 
-        do 3 destruct H.
-        destruct H.
-        destruct H1.
-        destruct H2.
+        repeat logicAuto.
         subst.
         + apply (IHsource2 x0 dupeResult) in H6; assumption.
         + assumption.
