@@ -20,6 +20,12 @@ Ltac applyInstructionOrder :=
 eapply instruction_order;
 eauto.
 
+Ltac unfoldCommon :=
+unfold testopOperation in *;
+unfold binopOperation in *;
+unfold UniOpTransform in *
+.
+
 Ltac unfoldCompiled H :=
     unfold compile in H; 
     simpl in H;
@@ -33,9 +39,8 @@ Ltac stepCompletes := (
 Ltac doesSingleStep := 
     ( (eapply W_ST_64Const; stepCompletes)
     || (eapply W_ST_32Const; stepCompletes)
-    || (eapply W_ST_64Add; stepCompletes)
-    || (eapply W_ST_64Sub; stepCompletes)
-    || (eapply W_ST_64Eqz; stepCompletes)
+    || (eapply W_ST_inn_ibinop; stepCompletes)
+    || (eapply W_ST_inn_itestop; stepCompletes)
     || (eapply W_ST_64IfTrue; stepCompletes)
     || (eapply W_ST_64IfFalse; stepCompletes)
     || (eapply W_ST_32IfTrue; stepCompletes)
@@ -46,11 +51,13 @@ Ltac doesSingleStep :=
 .
 
 Ltac doesStep :=
-simpl;
 repeat (
+    unfoldCommon;
+    simpl in *;
     (repeat destructBools);
     (repeat removeListNils); 
     (try assumption);
+    (try discriminate);
     match goal with 
     | [|- _ w-->* _ ]=> econstructor
     | [|- multi wasmStepInd _ _] => econstructor
@@ -61,8 +68,10 @@ repeat (
 
 Ltac solveCase := 
     repeat logicAuto;
-    subst;
+    unfoldCommon;
+    simpl in *;
     (repeat refineInductiveHypothesis);
+    subst;
     (try applyInstructionOrder);
     (try doesStep);
     (try assumption)
@@ -87,10 +96,9 @@ Proof.
     (* bool *)
     - unfoldCompiled H.
         solveCase.
-    (* add 1*)
+    (* uniary operators *)
     - apply uniaryOp_ImpliesSource in H.
-        destruct v; destruct d; (try discriminate);
-        solveCase.
+        destruct v; destruct d; (try discriminate); solveCase.
     (* if false*)
     - apply (ifBool_ImpliesSource source1 source2 source3 compiled #f) in H.
         + solveCase.
