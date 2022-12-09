@@ -10,12 +10,14 @@ Inductive dupeUniaryOp : Type :=
 | D_U_add1 
 | D_U_sub1 
 | D_U_zero
+| D_U_not
 .
 
 Definition uniOpToString (u :dupeUniaryOp) : string := match u with 
 | D_U_add1 => "add1"
 | D_U_sub1 => "sub1"
 | D_U_zero => "zero?"
+| D_U_not => "!"
 end.
 
 Inductive dupe: Type :=
@@ -65,18 +67,21 @@ Definition uniOpExpectedType op := match op with
 | D_U_add1 => typ_Int
 | D_U_sub1 => typ_Int
 | D_U_zero => typ_Int
+| D_U_not => typ_Bool
 end. 
 
 Definition uniOpResultType op := match op with 
 | D_U_add1 => typ_Int
 | D_U_sub1 => typ_Int
 | D_U_zero => typ_Bool
+| D_U_not => typ_Bool
 end. 
 
 Definition UniOpTransform op result := match (op, result) with 
 | (D_U_add1, DR_Int z) => DR_Int (z + 1)
 | (D_U_sub1, DR_Int z) => DR_Int (z - 1)
 | (D_U_zero, DR_Int z) => DR_Bool (z =? 0)
+| (D_U_not, DR_Bool b) => DR_Bool (negb b)
 | _ => DR_Error
 end.
 

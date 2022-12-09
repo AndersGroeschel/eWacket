@@ -25,6 +25,7 @@ Definition compileUniOp op := match op with
 | D_U_add1 => (i64.const 1)::(i64.add)::nil
 | D_U_sub1 => (i64.const 1)::(i64.sub)::nil
 | D_U_zero => i64.eqz::nil
+| D_U_not => i32.eqz::nil
 end.
 
 Fixpoint compile_typed (source: dupe) := match source with 
