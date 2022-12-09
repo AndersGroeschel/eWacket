@@ -1,30 +1,18 @@
+Require Import ZArith.
+Local Open Scope Z_scope.
+
+Require Import String.
+Open Scope list_scope.
+
 Require Import wacket.
 Require Import wasmLite.
 Require Import List.
-
-Require Import ZArith.
-Local Open Scope Z_scope.
-Open Scope list_scope.
-
-Require Import String.
 
 
 Inductive compilerResult : Type := 
 | Succ (C: wasmCode)
 | Error (err: string)
 .
-
-Inductive typ: Type :=
-| typ_Int
-| typ_Bool
-| typ_Error
-.
-
-Definition typeToString (t:typ) : string := match t with 
-| typ_Int => "Int"
-| typ_Bool => "Bool"
-| typ_Error => "Error"
-end.
 
 Definition typeSame t1 t2 := match (t1,t2) with 
 | (typ_Int,typ_Int) => true
@@ -33,32 +21,26 @@ Definition typeSame t1 t2 := match (t1,t2) with
 | _ => false
 end.
 
+Definition compileUniOp op := match op with 
+| D_U_add1 => (i64.const 1)::(i64.add)::nil
+| D_U_sub1 => (i64.const 1)::(i64.sub)::nil
+| D_U_zero => i64.eqz::nil
+end.
+
 Fixpoint compile_typed (source: dupe) := match source with 
 | D_Integer z => (typ_Int, Succ ((i64.const z)::nil))
-| D_Boolean b => (typ_Bool, Succ ((i32.const (if b then 1 else 0))::nil))
-| D_add1 e => 
-    match compile_typed e with 
-    | (typ_Int, Succ code) => (typ_Int, Succ(code ++ ((i64.const 1)::(i64.add)::nil)))
+| D_Boolean b => (typ_Bool, Succ ((i32.const (if b then 1 else 0))::nil)) 
+
+| D_UniOp op expr => 
+    match compile_typed expr with 
+    | (t, Succ code) => 
+        if typeSame t (uniOpExpectedType op) 
+        then (uniOpResultType op ,Succ (code ++ (compileUniOp op)))
+        else (typ_Error, Error (
+            (uniOpToString op) ++ "expression had type of: " ++ (typeToString t) ++
+            " expected type of : " ++ (typeToString (uniOpExpectedType op))
+        ))
     | (_, (Error err)) => (typ_Error, Error err)
-    | (typ, Succ _) => 
-        (typ_Error, Error ("add1 expression had type of: "++(typeToString typ) ++ 
-            " expected type of : " ++(typeToString typ_Int)) )
-    end
-| D_sub1 e => 
-    match compile_typed e with 
-    | (typ_Int, Succ code) => (typ_Int, Succ(code ++ ((i64.const 1)::(i64.sub)::nil)))
-    | (_, (Error err)) => (typ_Error, Error err)
-    | (typ, Succ _) => 
-        (typ_Error, Error ("sub1 expression had type of: "++(typeToString typ) ++ 
-            " expected type of : " ++(typeToString typ_Int)) )
-    end
-| D_zero e => 
-    match compile_typed e with 
-    | (typ_Int, Succ code) => (typ_Int, Succ(code ++ (i64.eqz::nil)))
-    | (_, (Error err)) => (typ_Error, Error err)
-    | (typ, Succ _) => 
-        (typ_Error, Error ("zero? expression had type of: "++(typeToString typ) ++ 
-            " expected type of : " ++(typeToString typ_Int)) )
     end
 | D_if b t e => 
     match (compile_typed b, compile_typed t, compile_typed e) with 
@@ -83,27 +65,12 @@ Definition compile (source :dupe) := match compile_typed source with
 | (_,Error err) => Error err
 end.
 
-(* need these lemmas *)
-Lemma add1_ImpliesSource :
-forall src compiled, 
-    compile (add1 src) = Succ compiled ->
-    exists code, ((compile src = Succ code) /\ (compiled = code ++ ((i64.const 1)::(i64.add)::nil))).
+Lemma uniaryOp_ImpliesSource:
+forall src compiled op, 
+    compile (D_UniOp op src) = Succ compiled ->
+    exists code, ((compile src = Succ code) /\ (compiled = code ++ (compileUniOp op))).
 Proof.
-    Admitted.
-
-Lemma sub1_ImpliesSource :
-forall src compiled, 
-    compile (sub1 src) = Succ compiled ->
-    exists code, ((compile src = Succ code) /\ (compiled = code ++ ((i64.const 1)::(i64.sub)::nil))).
-Proof.
-    Admitted.
-
-Lemma zero_ImpliesSource :
-forall src compiled, 
-    compile (zero? src) = Succ compiled ->
-    exists code, ((compile src = Succ code) /\ (compiled = code ++ (i64.eqz::nil))).
-Proof.
-    Admitted.
+   Admitted.
 
 Lemma ifBool_ImpliesSource :
 forall srcIf srcThen srcElse compiled b, 

@@ -88,13 +88,8 @@ Proof.
     - unfoldCompiled H.
         solveCase.
     (* add 1*)
-    - apply add1_ImpliesSource in H.
-        solveCase.
-    (* sub1 *)
-    - apply sub1_ImpliesSource in H. 
-        solveCase.
-    (* eqz *)
-    - apply zero_ImpliesSource in H. 
+    - apply uniaryOp_ImpliesSource in H.
+        destruct v; destruct d; (try discriminate);
         solveCase.
     (* if false*)
     - apply (ifBool_ImpliesSource source1 source2 source3 compiled #f) in H.
