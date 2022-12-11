@@ -162,43 +162,107 @@ Inductive dupeEval: dupe -> (dupeType * dupeResult)%type -> Prop :=
 where " src 'd==>' val " := (dupeEval src val).
 
 
-Theorem evalTypesSame:
-    forall src val type,
-        src d==> (type, val) ->
-        resultType val = type.
-Proof.
-    induction src; intros;
-    destruct val; destruct type; (try reflexivity); simpl in *;
-    try (solve [inversion H]);
-    try (
-        destruct d; inversion H; subst; destruct H5; inversion H0; subst;
-        (eapply (IHsrc v) in H3);
-        destruct v
-    );
-    try (discriminate);
-    try (solve [inversion H; subst; 
-                eapply IHsrc3 in H7; eapply IHsrc2 in H6; 
-                (try discriminate)
-        ]).
-Qed.
+Fixpoint typeOfDupe (source :dupe) := match source with 
+| D_Integer _ => D_type_Int
+| D_Boolean _ => D_type_Bool
+| D_UniOp op exp => let t := typeOfDupe exp in 
+    match uniOpTypeSignatureForAccept op t with 
+    | Some (accepts,returns) => returns
+    | None => D_type_Error
+    end
+| D_if b t e => match (typeOfDupe b, typeOfDupe t, typeOfDupe e ) with 
+    | (D_type_Bool,t1,t2) => if typeSame t1 t2 then t1 else D_type_Error
+    | (D_type_Int,t1,t2) => if typeSame t1 t2 then t1 else D_type_Error
+    | _ => D_type_Error
+    end
+end.
 
-Ltac copyHypothesis H := 
-    let tmp := fresh "H" in 
-    let eq := fresh "eq" in
-    remember H as tmp eqn: eq; clear eq
+
+Ltac evalPreamble := 
+try match goal with 
+| |- forall (src : dupe) (val : dupeResult), src d==> (resultType val, val) -> _ => 
+        induction src; intros
+| |- forall (src : dupe) (val : dupeResult), evalDupe src = val -> _ =>
+        induction src; intros; try (simpl in *; subst; constructor)
+end.
+
+Ltac destructDupeProperties := 
+repeat match goal with 
+| dUniop: dupeUniaryOp |- _ => 
+        destruct dUniop; simpl in *;(try discriminate)
+| dResult: dupeResult |- _ => 
+        destruct dResult; simpl in *;(try discriminate)
+| dType: dupeType |- _ => 
+        destruct dType; simpl in *;(try discriminate)
+end.
+
+Ltac refineHypothesis := 
+repeat match goal with 
+    | H : False |- _ => contradiction H
+    | H : _ \/ _ |- _ => destruct H
+    | H : _ /\ _ |- _ => destruct H
+    | H: ?a = ?a |- _ => clear H
+    | H: (_,_) = (_,_) |- _ => inversion H;subst
+    | H: context[In _ _] |- _ => simpl in H
+end.
+
+Ltac invertConstructiveDupe := 
+    match goal with 
+    | H: D_Integer ?z d==> (?type,?val) |- _ => inversion H; subst
+    | H: D_Boolean ?b d==> (?type,?val) |- _ => inversion H; subst
+    | H: (D_UniOp ?op ?src) d==> (?type,?val) |- _ => inversion H; subst
+    | H: (D_if ?srcIf ?srcThen ?srcElse) d==> (?type,?val) |- _ => inversion H; subst
+    end; (try reflexivity)
 .
 
-Ltac rewriteLeft := match goal with 
-| H: ?l = _ |- context[?l] => rewrite -> H
-| H: ?l = _, H0: context[?l] |- _ => rewrite -> H in H0
-| _ => fail
-end.
-Ltac rewriteRight := match goal with 
-| H: _ = ?r |- context[?r] => rewrite <- H
-| H: _ = ?r, H0: context[?r] |- _ => rewrite <- H in H0
-| _ => fail
-end.
 
+Theorem evalTypesSame:
+    forall src type val,
+        src d==> (type, val) ->
+        resultType val = type.
+Proof. 
+    induction src; intros;
+    evalPreamble;
+    destructDupeProperties;
+    invertConstructiveDupe;
+    refineHypothesis; (try discriminate);
+    repeat match goal with 
+    | H : ?src d==> (?type, ?val),
+        IH: forall (type : dupeType) (val : dupeResult),
+        ?src d==> (type, val) -> resultType val = type 
+        |- _ =>
+        specialize (IH type val H); subst
+    end; 
+    destructDupeProperties;
+    try reflexivity.
+Qed.
+
+Ltac removeSpecificType := 
+match goal with 
+| |- forall (src : dupe) (type : dupeType) (val : dupeResult), src d==> (type, val) -> _ => 
+    intros; let tmp := fresh "H" in 
+    let eq := fresh "eq" in
+    match goal with 
+    | H: ?src d==> (?type, ?val) |- _ => 
+        remember H as tmp eqn: eq; clear eq;
+        apply evalTypesSame in tmp;
+        rewrite <- tmp in *; (try discriminate);
+        clear tmp; clear type;
+        generalize dependent val;
+        generalize dependent src
+    end
+| H: ?src d==> (?type, ?val) |- _ => 
+    lazymatch goal with 
+    | H1: ?src1 d==> (type, ?val1),
+        H2: resultType ?val1 = type |- _ => fail
+    | H1: resultType val = type |- _ => fail
+    | |- _ => let tmp := fresh "H" in 
+        let eq := fresh "eq" in
+        remember H as tmp eqn: eq; clear eq;
+        apply evalTypesSame in tmp; 
+        rewrite <- tmp in *; (try discriminate)
+    end
+end.
 
 Ltac specializeIH := match goal with 
 | IH: ?hyp -> ?prop, H: ?hyp |- _ => specialize (IH H)
@@ -218,6 +282,10 @@ Ltac specializeIH := match goal with
 | IH: forall val: dupeResult,
     evalDupe ?src = val -> _ |- _ => specialize (IH (evalDupe src))
 
+| H: ?src d==> (resultType ?val, ?val),
+    IH: forall (val: dupeResult),
+    ?src d==> (resultType val, val) -> _ |- _ => specialize (IH val H)
+
 | IH: ?a = ?a -> _ |- _ => 
     let tmp := fresh "H" in 
     assert (a = a) as tmp;[reflexivity | (specialize (IH tmp));clear tmp]
@@ -230,102 +298,83 @@ Ltac specializeIH := match goal with
     ]
 end.
 
-
-Ltac solveUniOp := try match goal with 
-| H: (D_UniOp ?op ?src) d==> (resultType ?val, ?val) |- _ => inversion H; subst
-end;
-(repeat specializeIH);
-repeat (
-    (try assumption);
-    (try discriminate);
-    (try contradiction);
-    (try reflexivity);
-    match goal with 
-    | dUniop: dupeUniaryOp, dResult: dupeResult |- _ => 
-        destruct dUniop; destruct dResult; simpl in *;
-        (try discriminate)
-    | H: uniOpTransform ?op (evalDupe ?src) = ?val |- (D_UniOp ?op ?src) d==> (_,?val) =>
-        rewrite <- H
-    | |- (D_UniOp ?op ?src) d==> (?type, uniOpTransform ?op ?srcResult) => 
-        apply (E_D_UniOp src srcResult (resultType srcResult) op type)
-    | H: uniOpTransform ?op ?srcVal = ?val |- In (resultType ?srcVal, ?resType) (uniOpTypeSignature ?op) => 
-        destruct srcVal; solve[(try discriminate H); (try contradiction); repeat ((left; reflexivity) || right)]
-    | IH: resultType ?srcResult <> D_type_Error -> _,
-        H0: uniOpTransform ?op ?srcResult = ?result |- _ => 
-        destruct srcResult; (try discriminate H0); simpl in IH
-    | IH: ?t1 <> ?t2 -> _ |-  _ => 
-        let tmp := fresh "H" in
-        assert (t1 <> t2) as tmp; [
-            solve[discriminate]|
-            specialize (IH tmp); clear tmp
-        ]
-    | H: ?val1 = ?val2 |- uniOpTransform ?op ?val1 = uniOpTransform ?op ?val2 =>
-        rewrite H
-    | H : _ \/ _ |- _ => destruct H
-    | H : _ /\ _ |- _ => destruct H
-    | H: ?l = _ |- context[?l] => rewrite -> H
-    | H: ?l = _, H0: context[?l] |- _ => rewrite -> H in H0
-    | _ => idtac "fail";fail
-    end
-).
-
-Ltac solveIfs := repeat (match goal with 
-| H: dupeResult |- _ => destruct H
-| |- evalDupe (D_if ?src1 ?src2 ?src3) = _ => simpl
-end); try match goal with 
-| H: D_if ?src1 ?src2 ?src3 d==> (_,_) |- _ => inversion H;subst
-end;
-repeat specializeIH;
-repeat (
-(try discriminate);
-(try contradiction);
-(try reflexivity);
+Ltac applyEvalRules := 
 match goal with 
-| H: evalDupe (D_if ?src1 ?src2 ?src3) = _ |- _ => 
-    simpl in H; destruct (evalDupe src1); 
-    destruct (evalDupe src2); destruct (evalDupe src3);
-    simpl in *
-| IH: (?t1 <> ?t2) -> _ |-  _ => 
+    | |- (D_UniOp ?op ?src) d==> (?type, uniOpTransform ?op ?srcResult) => 
+        apply (E_D_UniOp src srcResult (resultType srcResult) op type); simpl;[
+            solve [try specializeIH; (try assumption)]| 
+            solve[(try contradiction);repeat ((left; reflexivity) || right)]
+        ]
+    | Hsrc1: ?src1 d==> (D_type_Int, DR_Int ?z),
+        Hsrc2: ?src2 d==> (?evalType, ?valThen),
+        Hsrc3: ?src3 d==> (?evalType, ?valElse)
+        |- (D_if ?src1 ?src2 ?src3) d==> (?evalType, ?valThen) => 
+            apply (E_D_ifInt src1 z src2 valThen src3 valElse evalType); assumption
+    | Hsrc1: ?src1 d==> (D_type_Bool, DR_Bool ?b),
+        Hsrc2: ?src2 d==> (?evalType, ?valThen),
+        Hsrc3: ?src3 d==> (?evalType, ?valElse)
+        |- (D_if ?src1 ?src2 ?src3) d==> (?evalType, if ?b then ?valThen else ?valElse) => 
+            destruct b; simpl; [
+                apply (E_D_ifTrue src1 src2 valThen src3 valElse evalType); assumption
+                | apply (E_D_ifFalse src1 src2 valThen src3 valElse evalType); assumption
+            ]  
+end.
+
+Ltac copyHypothesis H := 
     let tmp := fresh "H" in 
-    assert (t1 <> t2) as tmp;[
-        solve[discriminate]|
-        specialize (IH tmp); clear tmp
-    ]
-| H: context[if ?b then _ else _] |- _ => destruct b
+    let eq := fresh "eq" in
+    remember H as tmp eqn: eq; clear eq
+.
+
+Ltac rewriteLeft := match goal with 
 | H: ?l = _ |- context[?l] => rewrite -> H
 | H: ?l = _, H0: context[?l] |- _ => rewrite -> H in H0
-| Hsrc1: ?src1 d==> (D_type_Int, DR_Int ?z),
-    Hsrc2: ?src2 d==> (?evalType, ?valThen),
-    Hsrc3: ?src3 d==> (?evalType, ?valElse)
-    |- (D_if ?src1 ?src2 ?src3) d==> (?evalType, ?valThen) => 
-        apply (E_D_ifInt src1 z src2 valThen src3 valElse evalType); assumption
-| Hsrc1: ?src1 d==> (D_type_Bool, DR_Bool true),
-    Hsrc2: ?src2 d==> (?evalType, ?valThen),
-    Hsrc3: ?src3 d==> (?evalType, ?valElse)
-    |- (D_if ?src1 ?src2 ?src3) d==> (?evalType, ?valThen) => 
-        apply (E_D_ifTrue src1 src2 valThen src3 valElse evalType); assumption
-| Hsrc1: ?src1 d==> (D_type_Bool, DR_Bool false),
-    Hsrc2: ?src2 d==> (?evalType, ?valThen),
-    Hsrc3: ?src3 d==> (?evalType, ?valElse)
-    |- (D_if ?src1 ?src2 ?src3) d==> (?evalType, ?valElse) => 
-        apply (E_D_ifFalse src1 src2 valThen src3 valElse evalType); assumption
-| H: ?src d==> (?type, ?value) |- context[typeSame (resultType ?value) ?type] =>
-    let new := fresh "H" in 
-    let eq := fresh "eq" in
-    remember H as new eqn: eq; clear eq;
-    apply evalTypesSame in new;
-    rewrite new
-| H: ?src d==> (?type, ?value) |- context[typeSame ?type (resultType ?value)] =>
-    let new := fresh "H" in 
-    let eq := fresh "eq" in
-    remember H as new eqn: eq; clear eq;
-    apply evalTypesSame in new;
-    rewrite new
-end
-).
+| _ => fail
+end.
+Ltac rewriteRight := match goal with 
+| H: _ = ?r |- context[?r] => rewrite <- H
+| H: _ = ?r, H0: context[?r] |- _ => rewrite <- H in H0
+| _ => fail
+end.
 
 
+Ltac evalAuto := 
+    try removeSpecificType;
+    evalPreamble;
+    destructDupeProperties;
+    try invertConstructiveDupe;
+    refineHypothesis; (try discriminate);
+    destructDupeProperties;
+    repeat removeSpecificType;
+    repeat specializeIH; repeat rewriteLeft;
+    (try reflexivity);
+    repeat match goal with 
+    | IH : resultType (evalDupe ?src) <> D_type_Error ->
+            ?src d==> (resultType (evalDupe ?src), evalDupe ?src)
+        |- _ => destruct (evalDupe src); simpl in IH; (try discriminate)
+    end;
+    repeat specializeIH;
+    try match goal with 
+    | H: _ = ?val |- _ d==> (_,?val) => rewrite <- H in *
+    end;
+    (simpl in *);
+    (try discriminate);
+    try applyEvalRules;
+    try match goal with 
+    | H: (if ?b then _ else _) = _ |- _=> destruct b; discriminate
+    | H: D_type_Error <> D_type_Error |- _ => contradiction
+    end
+.
 
+
+Theorem TypeOfDupe_same_as_Eval:
+    forall src type val,
+        src d==> (type, val) -> 
+        typeOfDupe src = type.
+Proof.
+    evalAuto.
+Qed.
+    
 
 Theorem evalDupe_implies_dupeEval: 
     forall src val,
@@ -333,10 +382,7 @@ Theorem evalDupe_implies_dupeEval:
     ((resultType val) <> D_type_Error) ->
     src d==> (resultType val, val).
 Proof.
-    induction src; intros;
-    try (simpl in *; subst; constructor).
-    - solveUniOp.
-    - solveIfs.
+    evalAuto.
 Qed.
 
 
@@ -345,9 +391,7 @@ Theorem dupeEval_implies_evalDupe:
     src d==> (resultType val, val) ->
     evalDupe src = val.
 Proof.
-    induction src; intros; (try (inversion H; subst; reflexivity)).
-    - solveUniOp.
-    - solveIfs.
+    evalAuto.
 Qed.
 
 
@@ -356,10 +400,7 @@ forall src val,
     src d==> (resultType val, val) ->
     ((resultType val) <> D_type_Error).
 Proof.
-    induction src; intros;
-    try (inversion H; subst; discriminate).
-    - solveUniOp.
-    - solveIfs.
+    evalAuto.
 Qed.
 
 
@@ -379,6 +420,3 @@ Proof.
         + assumption.
 Qed.
 
-
-    
-        
