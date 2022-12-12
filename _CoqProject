@@ -3,9 +3,7 @@ src/utils.v
 src/wacket.v
 src/wasmLite.v
 
-
 src/compiler.v
-src/helperTactics.v
 src/ewacket.v
 
 
