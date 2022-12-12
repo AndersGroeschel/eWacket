@@ -241,8 +241,31 @@ forall srcIf srcThen srcElse compiled z,
     exists codeIf codeThen codeElse, 
         ((compile srcIf = Succ codeIf) /\ (compile srcThen = Succ codeThen) /\ (compile srcElse = Succ codeElse) /\
         (compiled = codeThen)).
-Proof.
-    Admitted.
-
-
+Proof with auto.
+    intros.
+    assert (exists cIf, compile srcIf = cIf );
+    assert (exists cThen, compile srcThen = cThen);
+    assert (exists cElse, compile srcElse = cElse);
+    try (exists (compile srcElse); reflexivity);
+    try (exists (compile srcThen); reflexivity);
+    try (exists (compile srcIf); reflexivity).
+    destruct H1. destruct H2. destruct H3.
+    remember H1. remember H2. remember H3.
+    clear Heqe. clear Heqe0. clear Heqe1.
+    apply compile_implies_typed in e.
+    apply compile_implies_typed in e0.
+    apply compile_implies_typed in e1.
+    destruct e. destruct e0. destruct e1.
+    destruct x. destruct x0. destruct x1.
+    exists C. exists C0. exists C1. split... split... split...
+    unfold compile in H. simpl in H.
+    rewrite H4 in H. rewrite H5 in H. rewrite H6 in H.
+    destruct x2 eqn: E; destruct x3; destruct x4; inversion H; auto;
+    apply dupeEvalTypeMatchesCompileType with
+    srcIf D_type_Int D_type_Bool (DR_Int z) (Succ C) in H0;
+    congruence.
+    all: unfold compile in H; simpl in H;
+    rewrite H4 in H; rewrite H5 in H; rewrite H6 in H;
+    destruct x2 eqn: E; inversion H.
+Qed.
 
