@@ -55,35 +55,50 @@ Fixpoint evalDupe(d : dupe) := match d with
     end
 end.
 
+Inductive dupeType: Type :=
+| D_type_Int
+| D_type_Bool
+| D_type_Error
+.
+
+Definition typeOfDupeResult d := match d with 
+| DR_Int _ => D_type_Int
+| DR_Bool _ => D_type_Bool
+| DR_Error => D_type_Error
+end.
+
 
 (* this will probably have to be changed because of how integers are represented in binary*)
-Reserved Notation " t 'd==>' n " (at level 50, left associativity).
-Inductive dupeEval: dupe -> dupeResult -> Prop :=
-| E_D_Interger: forall z, (D_Integer z) d==> (DR_Int z)
-| E_D_Boolean: forall b, (D_Boolean b) d==> (DR_Bool b)
+Reserved Notation " src 'd==>' val " (at level 50, left associativity).
+Inductive dupeEval: dupe -> (dupeType * dupeResult)%type -> Prop :=
+| E_D_Interger: forall z, (D_Integer z) d==> (D_type_Int, (DR_Int z))
+| E_D_Boolean: forall b, (D_Boolean b) d==> (D_type_Bool ,(DR_Bool b))
 
 | E_D_add1: forall t z, 
-    t d==> (DR_Int z) ->
-    (D_add1 t) d==> (DR_Int (z + 1))
+    t d==> (D_type_Int, DR_Int z) ->
+    (D_add1 t) d==> (D_type_Int, DR_Int (z + 1))
 | E_D_sub1: forall t z, 
-    t d==> (DR_Int z) ->
-    (D_sub1 t) d==> (DR_Int (z - 1))
+    t d==> (D_type_Int,DR_Int z) ->
+    (D_sub1 t) d==> (D_type_Int,DR_Int (z - 1))
 
 | E_D_isZero: forall t z,
-    t d==> (DR_Int z) ->
-    (D_zero t) d==> (DR_Bool (Z.eqb z 0))
+    t d==> (D_type_Int,DR_Int z) ->
+    (D_zero t) d==> (D_type_Bool, DR_Bool (Z.eqb z 0))
 
-| E_D_ifFalse: forall t_if t_then t_else v,
-    t_if d==> (DR_Bool false) -> 
-    t_else d==> v ->
-    (D_if t_if t_then t_else) d==> v
-| E_D_ifTrue: forall t_if t_then v t_else ,
-    t_if d==> (DR_Bool true) -> 
-    t_then d==> v ->
-    (D_if t_if t_then t_else) d==> v
-| E_D_ifInt: forall t_if z t_then v t_else ,
-    t_if d==> (DR_Int z) -> 
-    t_then d==> v ->
-    (D_if t_if t_then t_else) d==> v
+| E_D_ifFalse: forall t_if t_then vt t_else ve evalType,
+    t_if d==> (D_type_Bool,(DR_Bool false)) -> 
+    t_then d==> (evalType,vt) ->
+    t_else d==> (evalType,ve) ->
+    (D_if t_if t_then t_else) d==> (evalType,ve)
+| E_D_ifTrue: forall t_if t_then vt t_else ve evalType,
+    t_if d==> (D_type_Bool,(DR_Bool true)) -> 
+    t_then d==> (evalType,vt) ->
+    t_else d==> (evalType,ve) ->
+    (D_if t_if t_then t_else) d==> (evalType,vt)
+| E_D_ifInt: forall t_if z t_then vt t_else ve evalType,
+    t_if d==> (D_type_Int,(DR_Int z)) -> 
+    t_then d==> (evalType,vt) ->
+    t_else d==> (evalType,ve) ->
+    (D_if t_if t_then t_else) d==> (evalType,vt)
 
-where " t 'd==>' n " := (dupeEval t n).
+where " src 'd==>' val " := (dupeEval src val).
