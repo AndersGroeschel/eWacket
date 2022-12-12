@@ -83,13 +83,40 @@ Definition compile (source :dupe) := match compile_typed source with
 | (_,Error err) => Error err
 end.
 
+Lemma compileSucc_implies_typedSucc :
+forall src compiled, 
+    compile src = compiled ->
+    exists t, compile_typed src = (t,compiled).
+Proof.
+intros.
+unfold compile in H.
+destruct compiled; destruct (compile_typed src); destruct c;
+(try discriminate);exists t;rewrite H; reflexivity.
+Qed.
+
 (* need these lemmas *)
 Lemma add1_ImpliesSource :
 forall src compiled, 
     compile (add1 src) = Succ compiled ->
     exists code, ((compile src = Succ code) /\ (compiled = code ++ ((i64.const 1)::(i64.add)::nil))).
 Proof.
-    Admitted.
+    intros.
+    assert (exists c, compile src = c).
+    - exists (compile src). reflexivity.
+    - destruct H0. remember H0. clear Heqe. 
+        apply compileSucc_implies_typedSucc in e. 
+        destruct e.
+        destruct x.
+        + exists C. split.
+            * assumption.
+            * unfold compile in H. simpl in H.
+                rewrite H1 in H. destruct x0.
+                -- inversion H. reflexivity.
+                -- inversion H.
+                -- inversion H.
+        + * unfold compile in H. simpl in H.
+            rewrite H1 in H. destruct x0; try discriminate.
+Qed.
 
 Lemma sub1_ImpliesSource :
 forall src compiled, 
