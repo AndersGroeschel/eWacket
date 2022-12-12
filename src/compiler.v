@@ -54,7 +54,7 @@ Fixpoint compile_typed (source: dupe) := match source with
     end
 | D_zero e => 
     match compile_typed e with 
-    | (typ_Int, Succ code) => (typ_Int, Succ(code ++ (i64.eqz::nil)))
+    | (typ_Int, Succ code) => (typ_Bool, Succ(code ++ (i64.eqz::nil)))
     | (_, (Error err)) => (typ_Error, Error err)
     | (typ, Succ _) => 
         (typ_Error, Error ("zero? expression had type of: "++(typeToString typ) ++ 
@@ -97,8 +97,8 @@ Qed.
 (* need these lemmas *)
 Lemma add1_ImpliesSource :
 forall src compiled, 
-    compile_typed (add1 src) = (typ_Int, Succ compiled) ->
-    exists code, ((compile_typed src = (typ_Int, Succ code)) /\ (compiled = code ++ ((i64.const 1)::(i64.add)::nil))).
+    compile (add1 src) = Succ compiled ->
+    exists code, ((compile src = Succ code) /\ (compiled = code ++ ((i64.const 1)::(i64.add)::nil))).
 Proof.
     intros.
     assert (exists c, compile src = c).
@@ -123,14 +123,46 @@ forall src compiled,
     compile (sub1 src) = Succ compiled ->
     exists code, ((compile src = Succ code) /\ (compiled = code ++ ((i64.const 1)::(i64.sub)::nil))).
 Proof.
-    Admitted.
+    intros.
+    assert (exists c, compile src = c).
+    - exists (compile src). reflexivity.
+    - destruct H0. remember H0. clear Heqe. 
+        apply compileSucc_implies_typedSucc in e. 
+        destruct e.
+        destruct x.
+        + exists C. split.
+            * assumption.
+            * unfold compile in H. simpl in H.
+                rewrite H1 in H. destruct x0.
+                -- inversion H. reflexivity.
+                -- inversion H.
+                -- inversion H.
+        + * unfold compile in H. simpl in H.
+            rewrite H1 in H. destruct x0; try discriminate.
+Qed.
 
 Lemma zero_ImpliesSource :
 forall src compiled, 
     compile (zero? src) = Succ compiled ->
     exists code, ((compile src = Succ code) /\ (compiled = code ++ (i64.eqz::nil))).
 Proof.
-    Admitted.
+    intros.
+    assert (exists c, compile src = c).
+    - exists (compile src). reflexivity.
+    - destruct H0. remember H0. clear Heqe. 
+        apply compileSucc_implies_typedSucc in e. 
+        destruct e.
+        destruct x.
+        + exists C. split.
+            * assumption.
+            * unfold compile in H. simpl in H.
+                rewrite H1 in H. destruct x0.
+                -- inversion H. reflexivity.
+                -- inversion H.
+                -- inversion H.
+        + * unfold compile in H. simpl in H.
+            rewrite H1 in H. destruct x0; try discriminate.
+Qed.
 
 Lemma ifBool_ImpliesSource :
 forall srcIf srcThen srcElse compiled b, 
@@ -139,7 +171,34 @@ forall srcIf srcThen srcElse compiled b,
     exists codeIf codeThen codeElse, 
         ((compile srcIf = Succ codeIf) /\ (compile srcThen = Succ codeThen) /\ (compile srcElse = Succ codeElse) /\
         (compiled = codeIf ++ ((ifThenElse codeThen codeElse)::nil))).
-Proof.
+Proof with auto.
+    intros.
+    assert (exists cIf, compile srcIf = cIf );
+    assert (exists cThen, compile srcThen = cThen);
+    assert (exists cElse, compile srcElse = cElse);
+    try (exists (compile srcElse); reflexivity);
+    try (exists (compile srcThen); reflexivity);
+    try (exists (compile srcIf); reflexivity).
+    destruct H1. destruct H2. destruct H3.
+    remember H1. remember H2. remember H3.
+    clear Heqe. clear Heqe0. clear Heqe1.
+    apply compileSucc_implies_typedSucc in e.
+    apply compileSucc_implies_typedSucc in e0.
+    apply compileSucc_implies_typedSucc in e1.
+    destruct e. destruct e0. destruct e1.
+    destruct x. destruct x0. destruct x1.
+    - exists C. exists C0. exists C1. split... split... split...
+      unfold compile in H. simpl in H.
+      rewrite H4 in H. rewrite H5 in H. rewrite H6 in H.
+      destruct x2; destruct x3; destruct x4.
+        + 
+      
+      inversion H; auto; subst.
+        + admit. 
+        + admit.
+        + 
+
+
     Admitted.
 
 
