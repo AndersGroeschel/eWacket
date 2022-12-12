@@ -97,8 +97,8 @@ Qed.
 (* need these lemmas *)
 Lemma add1_ImpliesSource :
 forall src compiled, 
-    compile (add1 src) = Succ compiled ->
-    exists code, ((compile src = Succ code) /\ (compiled = code ++ ((i64.const 1)::(i64.add)::nil))).
+    compile_typed (add1 src) = (typ_Int, Succ compiled) ->
+    exists code, ((compile_typed src = (typ_Int, Succ code)) /\ (compiled = code ++ ((i64.const 1)::(i64.add)::nil))).
 Proof.
     intros.
     assert (exists c, compile src = c).

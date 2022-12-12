@@ -16,8 +16,6 @@ Inductive wasmInstruction : Type :=
 (* pops a value (i64 or i32) from the stack, 
     if zero then add else branch to code otherwise add if branch to code*)
 | ifThenElse: (list wasmInstruction) -> (list wasmInstruction) -> wasmInstruction 
-| nop: wasmInstruction
-| unreachable: wasmInstruction
 .
 
 Inductive wasmValue : Type :=
@@ -32,6 +30,29 @@ Notation "'i64.add'" := (i64_add) (at level 99).
 Notation "'i64.sub'" := (i64_sub) (at level 99).
 Notation "'i64.eqz'" := (i64_eqz) (at level 99).
 Notation "'if' '(then' t ) '(else' e )" := (ifThenElse t e) (at level 99).
+
+Definition wasmStep code stack := match code with 
+| (i64_const i)::rest=> (rest,(v_i64 i)::stack)
+| (i32_const i)::rest => (rest,(v_i32 i)::stack)
+| i64_add::rest => match stack with 
+    | (v_i64 x)::(v_i64 y)::st' => (rest,(v_i64 (y + x))::st')
+    | stack => (rest,trap::stack)
+    end
+| i64_sub::rest => match stack with 
+    | (v_i64 x)::(v_i64 y)::st' => (rest,(v_i64 (y - x))::st')
+    | stack => (rest,trap::stack)
+    end
+| i64_eqz::rest => match stack with 
+    | (v_i64 z)::st' => (rest,(v_i32 (if z =? 0 then 1 else 0))::st')
+    | stack => (rest,trap::stack)
+    end
+| (ifThenElse tExp eExp)::rest => match stack with 
+    | (v_i32 z)::st' => if z =? 0 then ( eExp++rest,st') 
+                    else (tExp++rest,st')
+    | stack => (rest,trap::stack)
+    end
+| nil => (nil,stack)
+end.
 
 
 Definition wasmStack := list wasmValue.
@@ -63,17 +84,6 @@ Inductive wasmStepInd: wasmState -> wasmState -> Prop :=
     st = (v_i64 z)::st' ->
     (C, st) w--> (C', (v_i32 (if z =? 0 then 1 else 0))::st')
 
-| W_ST_64IfTrue: forall C Ct Ce C' st z st',
-    C = (ifThenElse Ct Ce)::C' ->
-    st = (v_i64 z)::st' ->
-    ~(z = 0) ->
-    (C, st) w--> (Ct ++ C', st')
-| W_ST_64IfFalse: forall C Ct Ce C' st z st',
-    C = (ifThenElse Ct Ce)::C' ->
-    st = (v_i64 z)::st' ->
-    (z = 0) ->
-    (C, st) w--> (Ce ++ C', st')
-
 | W_ST_32IfTrue: forall C Ct Ce C' st z st',
     C = (ifThenElse Ct Ce)::C' ->
     st = (v_i32 z)::st' ->
@@ -84,14 +94,6 @@ Inductive wasmStepInd: wasmState -> wasmState -> Prop :=
     st = (v_i32 z)::st' ->
     (z = 0) ->
     (C, st) w--> (Ce ++ C', st')
-
-| W_ST_nop: forall C C' st,
-    C = nop::C' ->
-    (C,st) w--> (C',st)
-
-| W_ST_unreachable: forall C C' st,
-    C = unreachable::C' ->
-    (C,st) w--> (C',trap::st)
 
 where "st 'w-->' st'" := (wasmStepInd st st').
 
@@ -119,10 +121,108 @@ Proof.
     (try congruence).
 Qed.
 
-Theorem instruction_order:
-forall C C' s v v',
-(C , s) w-->* (nil,v) ->
-(C',v) w-->* (nil,v') ->
-(C++C',nil) w-->* (nil,v').
+Lemma noIntruction_implies_sameState:
+forall v v',
+    (nil,v) w-->* (nil,v') ->
+    v = v'.
 Proof.
-    Admitted.
+    intros.
+    inversion H; subst.
+    - reflexivity.
+    - inversion H0; subst; discriminate.
+Qed.
+
+Ltac removeListNils := match goal with
+| [|- context[_ ++ nil] ] => rewrite app_nil_r
+| [|- context[nil ++ _] ] => rewrite app_nil_l
+| [H: context[_ ++ nil] |- _ ] => rewrite app_nil_r  in H
+| [H: context[nil ++ _] |- _ ] => rewrite app_nil_l  in H
+end.
+
+
+
+
+
+Theorem instruction_order:
+forall C' C x y z,
+(C , x) w-->* (nil,y) ->
+(C', y) w-->* (nil,z) ->
+(C++C',x) w-->* (nil,z).
+Proof. (*
+    intros.
+    remember H0.
+    clear Heqw.
+    induction H0.
+
+
+
+
+    induction C'.
+    - intros. repeat removeListNils. eapply multi_trans.
+        + apply H.
+        + apply H0. 
+    - induction s; intros. 
+        + repeat removeListNils.
+        inversion H0; subst.
+    
+    
+    
+    rewrite <- (app_nil_l C').
+        rewrite app_comm_cons.
+        rewrite (app_assoc).
+        inversion H0; subst.
+        destruct y0.
+        specialize (IHC' (C ++ (a :: nil)) x w0 z).
+        inversion H1; subst; match goal with 
+        | H: a::C' = _ |- _ => inversion H; subst
+        end; (apply IHC'; [admit| (try assumption)]).
+        + 
+        
+        
+
+
+    - repeat removeListNils. eapply multi_trans.
+        + apply H.
+        + assumption.
+    - repeat removeListNils.
+        rewrite <- (app_nil_l C').
+        rewrite app_comm_cons.
+        rewrite (app_assoc).
+        assert((C ++ a :: nil, x) w-->*  (wasmStep (a :: nil) y) ).
+        + admit. (*destruct a.
+            * exists nil. exists ((v_i64 i)::y). reflexivity.
+            * exists nil. exists ((v_i32 i)::y). reflexivity.
+            * destruct y.
+                -- exists nil. exists (trap::nil). reflexivity.
+                -- destruct y. 
+                    ++ exists nil. exists (trap::w::nil). destruct w; reflexivity.
+                    ++ destruct w; destruct w0.
+                        ** simpl. exists nil. exists (v_i64 (i0 + i) :: y). reflexivity.
+                        ** exists nil; exists (trap :: v_i64 i :: v_i32 i0 :: y). reflexivity.
+                        ** exists nil; exists (trap :: v_i64 i :: trap :: y). reflexivity.
+                        ** exists nil; exists (trap :: v_i32 i :: v_i64 i0 :: y). reflexivity.
+                        ** exists nil; exists (trap :: v_i32 i :: v_i32 i0 :: y). reflexivity. *)
+                
+        + destruct (wasmStep (a :: nil) y) eqn: eq.
+            apply (IHC' l (C ++ a :: nil) x l0 z).
+            * assumption.
+            * destruct a; simpl in eq; inversion eq; subst; repeat removeListNils. 
+
+
+
+    intros.
+    inversion H; inversion H0; subst; repeat removeListNils; (try assumption).
+    - generalize dependent x.
+    generalize dependent y.
+    generalize dependent z.
+    generalize dependent C.
+    induction C'; intros.
+        + apply noIntruction_implies_sameState in H0; subst.
+            removeListNils. assumption.
+        + rewrite <- (app_nil_l C').
+            rewrite app_comm_cons.
+            rewrite (app_assoc).
+            eapply IHC'; try assumption.
+*)
+Admitted.
+        
