@@ -118,14 +118,61 @@ forall src compiled,
     compile (sub1 src) = Succ compiled ->
     exists code, ((compile src = Succ code) /\ (compiled = code ++ ((i64.const 1)::(i64.sub)::nil))).
 Proof.
-    Admitted.
+    intros.
+    assert (exists c, compile src = c).
+    - exists (compile src). reflexivity.
+    - destruct H0. remember H0. clear Heqe. 
+        apply compile_implies_typed in e. 
+        destruct e.
+        destruct x.
+        + exists C. split.
+            * assumption.
+            * unfold compile in H. simpl in H.
+                rewrite H1 in H. destruct x0.
+                -- inversion H. reflexivity.
+                -- inversion H.
+                -- inversion H.
+        + * unfold compile in H. simpl in H.
+            rewrite H1 in H. destruct x0; try discriminate.
+Qed.
 
 Lemma zero_ImpliesSource :
 forall src compiled, 
     compile (zero? src) = Succ compiled ->
     exists code, ((compile src = Succ code) /\ (compiled = code ++ (i64.eqz::nil))).
 Proof.
+    intros.
+    assert (exists c, compile src = c).
+    - exists (compile src). reflexivity.
+    - destruct H0. remember H0. clear Heqe. 
+        apply compile_implies_typed in e. 
+        destruct e.
+        destruct x.
+        + exists C. split.
+            * assumption.
+            * unfold compile in H. simpl in H.
+                rewrite H1 in H. destruct x0.
+                -- inversion H. reflexivity.
+                -- inversion H.
+                -- inversion H.
+        + * unfold compile in H. simpl in H.
+            rewrite H1 in H. destruct x0; try discriminate.
+Qed.
+
+Lemma dupeEvalTypeMatchesCompileType:
+forall src d_type d_type' d_val cRes,
+    src d==> (d_type, d_val) ->
+    compile_typed src = (d_type', cRes) ->
+    d_type = d_type'.
+Proof.
     Admitted.
+
+(* Lemma dupeEvalTypeMatchesCompileType :
+forall src b,
+    src d==> (D_type_Bool, DR_Bool b) ->
+    exists cRes, compile_typed src = (D_type_Bool, cRes).
+Proof.
+    Admitted. *)
 
 Lemma ifBool_ImpliesSource :
 forall srcIf srcThen srcElse compiled b, 
@@ -134,8 +181,33 @@ forall srcIf srcThen srcElse compiled b,
     exists codeIf codeThen codeElse, 
         ((compile srcIf = Succ codeIf) /\ (compile srcThen = Succ codeThen) /\ (compile srcElse = Succ codeElse) /\
         (compiled = codeIf ++ ((ifThenElse codeThen codeElse)::nil))).
-Proof.
-    Admitted.
+Proof with auto.
+    intros.
+    assert (exists cIf, compile srcIf = cIf );
+    assert (exists cThen, compile srcThen = cThen);
+    assert (exists cElse, compile srcElse = cElse);
+    try (exists (compile srcElse); reflexivity);
+    try (exists (compile srcThen); reflexivity);
+    try (exists (compile srcIf); reflexivity).
+    destruct H1. destruct H2. destruct H3.
+    remember H1. remember H2. remember H3.
+    clear Heqe. clear Heqe0. clear Heqe1.
+    apply compile_implies_typed in e.
+    apply compile_implies_typed in e0.
+    apply compile_implies_typed in e1.
+    destruct e. destruct e0. destruct e1.
+    destruct x. destruct x0. destruct x1.
+    exists C. exists C0. exists C1. split... split... split...
+    unfold compile in H. simpl in H.
+    rewrite H4 in H. rewrite H5 in H. rewrite H6 in H.
+    destruct x2 eqn: E; destruct x3; destruct x4; inversion H; auto;
+    apply dupeEvalTypeMatchesCompileType with
+    srcIf D_type_Bool D_type_Int (DR_Bool b) (Succ C) in H0;
+    congruence.
+    all: unfold compile in H; simpl in H;
+    rewrite H4 in H; rewrite H5 in H; rewrite H6 in H;
+    destruct x2 eqn: E; inversion H.
+Qed.
 
 
 Lemma ifInt_ImpliesSource :
@@ -145,8 +217,31 @@ forall srcIf srcThen srcElse compiled z,
     exists codeIf codeThen codeElse, 
         ((compile srcIf = Succ codeIf) /\ (compile srcThen = Succ codeThen) /\ (compile srcElse = Succ codeElse) /\
         (compiled = codeThen)).
-Proof.
-    Admitted.
-
-
+Proof with auto.
+    intros.
+    assert (exists cIf, compile srcIf = cIf );
+    assert (exists cThen, compile srcThen = cThen);
+    assert (exists cElse, compile srcElse = cElse);
+    try (exists (compile srcElse); reflexivity);
+    try (exists (compile srcThen); reflexivity);
+    try (exists (compile srcIf); reflexivity).
+    destruct H1. destruct H2. destruct H3.
+    remember H1. remember H2. remember H3.
+    clear Heqe. clear Heqe0. clear Heqe1.
+    apply compile_implies_typed in e.
+    apply compile_implies_typed in e0.
+    apply compile_implies_typed in e1.
+    destruct e. destruct e0. destruct e1.
+    destruct x. destruct x0. destruct x1.
+    exists C. exists C0. exists C1. split... split... split...
+    unfold compile in H. simpl in H.
+    rewrite H4 in H. rewrite H5 in H. rewrite H6 in H.
+    destruct x2 eqn: E; destruct x3; destruct x4; inversion H; auto;
+    apply dupeEvalTypeMatchesCompileType with
+    srcIf D_type_Int D_type_Bool (DR_Int z) (Succ C) in H0;
+    congruence.
+    all: unfold compile in H; simpl in H;
+    rewrite H4 in H; rewrite H5 in H; rewrite H6 in H;
+    destruct x2 eqn: E; inversion H.
+Qed.
 
