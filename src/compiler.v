@@ -86,10 +86,25 @@ end.
 (* need these lemmas *)
 Lemma add1_ImpliesSource :
 forall src compiled, 
-    compile (add1 src) = Succ compiled ->
-    exists code, ((compile src = Succ code) /\ (compiled = code ++ ((i64.const 1)::(i64.add)::nil))).
+    compile_typed (add1 src) = (typ_Int, Succ compiled) ->
+    exists code, ((compile_typed src = (typ_Int, Succ code)) /\ (compiled = code ++ ((i64.const 1)::(i64.add)::nil))).
 Proof.
-    Admitted.
+    induction src; intros.
+    -inversion H; exists ((i64.const z)::nil). split. reflexivity. reflexivity.
+    - inversion H.
+    - assert (exists (code : wasmCode), compile_typed ( add1 src) = (typ_Int, Succ code)).
+        + admit.
+        + destruct H0. specialize (IHsrc x H0). destruct IHsrc. destruct H1. exists x. split. 
+            * assumption. 
+            * admit. 
+    - assert (exists (code : wasmCode), compile_typed ( sub1 src) = (typ_Int, Succ code)).
+        + admit.
+        + destruct H0. admit.
+    - assert (exists (code : wasmCode), compile_typed ( zero? src) = (typ_Int, Succ code)).
+        + admit.
+        + destruct H0. admit.
+    - admit.
+Admitted.  
 
 Lemma sub1_ImpliesSource :
 forall src compiled, 
