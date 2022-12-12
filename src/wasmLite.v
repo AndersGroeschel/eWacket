@@ -141,14 +141,21 @@ end.
 
 
 
-
+Print multi.
 
 Theorem instruction_order:
 forall C' C x y z,
 (C , x) w-->* (nil,y) ->
 (C', y) w-->* (nil,z) ->
 (C++C',x) w-->* (nil,z).
-Proof. (*
+Proof. 
+    intros. generalize dependent C'. generalize dependent z.
+    remember (C, x) as pre.
+    remember (nil, y) as post.
+    induction H.
+    - 
+
+(*
     intros.
     remember H0.
     clear Heqw.
