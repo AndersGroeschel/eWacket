@@ -183,6 +183,21 @@ Proof.
             rewrite H1 in H. destruct x0; try discriminate.
 Qed.
 
+Lemma dupeEvalTypeMatchesCompileType:
+forall src d_type d_type' d_val cRes,
+    src d==> (d_type, d_val) ->
+    compile_typed src = (d_type', cRes) ->
+    d_type = d_type'.
+Proof.
+    Admitted.
+
+(* Lemma dupeEvalTypeMatchesCompileType :
+forall src b,
+    src d==> (D_type_Bool, DR_Bool b) ->
+    exists cRes, compile_typed src = (D_type_Bool, cRes).
+Proof.
+    Admitted. *)
+
 Lemma ifBool_ImpliesSource :
 forall srcIf srcThen srcElse compiled b, 
     compile (If srcIf Then srcThen Else srcElse) = Succ compiled ->
@@ -209,8 +224,14 @@ Proof with auto.
     - exists C. exists C0. exists C1. split... split... split...
       unfold compile in H. simpl in H.
       rewrite H4 in H. rewrite H5 in H. rewrite H6 in H.
-      destruct x2; destruct x3; destruct x4.
-        + 
+      destruct x2 eqn: E; destruct x3; destruct x4; inversion H; auto;
+      apply dupeEvalTypeMatchesCompileType with
+        srcIf D_type_Bool D_type_Int (DR_Bool b) (Succ C) in H0;
+        congruence.
+    - unfold compile in H. simpl in H.
+      rewrite H4 in H. rewrite H5 in H. rewrite H6 in H.
+      destruct x2 eqn: E; inversion H.
+    - 
 
 
     Admitted.
