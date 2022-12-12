@@ -89,12 +89,7 @@ forall src compiled,
     compile (add1 src) = Succ compiled ->
     exists code, ((compile src = Succ code) /\ (compiled = code ++ ((i64.const 1)::(i64.add)::nil))).
 Proof.
-    intros. destruct src.
-    - simpl in H. inversion H. exists ((i64.const z)::nil). split. reflexivity. reflexivity.
-    - simpl in H. inversion H. 
-    - simpl in H. inversion H. exists((i64.const 1)::(i64.add):: nil). split.
-        + 
-        + reflexivity.
+    Admitted.
 
 Lemma sub1_ImpliesSource :
 forall src compiled, 

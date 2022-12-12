@@ -2,7 +2,6 @@ Require Import List ZArith.
 Local Open Scope Z_scope.
 
 Require Import utils.
-Require Import ewacket.
 
 (* based on definitions laid out here: 
    https://webassembly.github.io/spec/core/intro/index.html *)
@@ -10,8 +9,8 @@ Require Import ewacket.
 Inductive wasmInstruction : Type :=
 | i64_const: i64 -> wasmInstruction (* adds i64 to stack*)
 | i32_const: i32 -> wasmInstruction (* adds i32 to stack*)
-| i64_add: wasmInstruction (* pops 2 i64 from stack and pushes their sum*)
-| i64_sub: wasmInstruction (* pops 2 i64 from stack and pushes their difference*)
+| i64_add: wasmInstruction (* pops 2 i64 from stack and pushes there sum*)
+| i64_sub: wasmInstruction (* pops 2 i64 from stack and pushes there difference*)
 | i64_eqz: wasmInstruction (* pops 1 i64 from stack and pushes an i32, 0 if false, 1 if true*)
 
 (* pops a value (i64 or i32) from the stack, 
@@ -126,18 +125,4 @@ forall C C' s v v',
 (C',v) w-->* (nil,v') ->
 (C++C',nil) w-->* (nil,v').
 Proof.
-    intros.
-    induction C'.
-    induction s. 
-    inversion H.
-    inversion H0.
-    subst.
-    - simpl. apply H.
-    - simpl. symmetry in H4. rewrite H4 in H0. assumption.
-    - simpl. subst. eapply multi_step. 
-        + removeListNils. eassumption.
-        + destruct y. apply multi_trans with (y:= (nil,v)). 
-            * assumption.
-            * apply H0.
-    -  apply IHs. apply multi_trans with (y:= (nil,v)).  
-        +  Admitted.
+    Admitted.
