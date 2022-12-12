@@ -102,3 +102,23 @@ Inductive dupeEval: dupe -> (dupeType * dupeResult)%type -> Prop :=
     (D_if t_if t_then t_else) d==> (evalType,vt)
 
 where " src 'd==>' val " := (dupeEval src val).
+
+Lemma evalType_same_as_valueType:
+    forall src value type ,
+    src d==> (type,value) ->
+    type = typeOfDupeResult value.
+Proof.
+    induction src; intros;
+    destruct value; destruct type;
+    inversion H; subst; (try reflexivity);
+    repeat match goal with 
+    | H : ?src d==> (?type, ?val),
+        IH: forall (value : dupeResult) (type : dupeType),
+        ?src d==> (type, value) -> _ 
+        |- _ => specialize (IH val type H); subst
+    end;
+    (try assumption).
+Qed.
+    
+    
+

@@ -88,30 +88,6 @@ destruct compiled; destruct (compile_typed src); destruct c;
 (try discriminate);exists d;rewrite H; reflexivity.
 Qed.
 
-Lemma evalType_same_as_compileType:
-    forall src value type compiled ,
-    src d==> (type,value) ->
-    compile_typed src = (type, (Succ compiled)) ->
-    compile_typed src = (typeOfDupeResult value, (Succ compiled)).
-Proof.
-    (*intros.
-    generalize dependent compiled.
-    generalize dependent type.
-    induction H; intros;
-    simpl in *.
-    all: try solve[repeat match goal with 
-    | H : context[compile_typed ?t] |- _ => destruct (compile_typed t); (try assumption); (try discriminate)
-    | type: typ |- _ => destruct type; (try assumption); (try discriminate)
-    | compiled: compilerResult |- _ => destruct compiled; (try assumption); (try discriminate)
-    end].
-    - destruct (compile_typed t_else); 
-        destruct (compile_typed t_if);
-        destruct (compile_typed t_then);
-        destruct t; destruct c;
-        destruct t0; destruct c0;
-        destruct t1; destruct c1.*)
-Admitted.
-    
 
 (* need these lemmas *)
 Lemma add1_ImpliesSource :
