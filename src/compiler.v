@@ -221,20 +221,17 @@ Proof with auto.
     apply compile_implies_typed in e1.
     destruct e. destruct e0. destruct e1.
     destruct x. destruct x0. destruct x1.
-    - exists C. exists C0. exists C1. split... split... split...
-      unfold compile in H. simpl in H.
-      rewrite H4 in H. rewrite H5 in H. rewrite H6 in H.
-      destruct x2 eqn: E; destruct x3; destruct x4; inversion H; auto;
-      apply dupeEvalTypeMatchesCompileType with
-        srcIf D_type_Bool D_type_Int (DR_Bool b) (Succ C) in H0;
-        congruence.
-    - unfold compile in H. simpl in H.
-      rewrite H4 in H. rewrite H5 in H. rewrite H6 in H.
-      destruct x2 eqn: E; inversion H.
-    - 
-
-
-    Admitted.
+    exists C. exists C0. exists C1. split... split... split...
+    unfold compile in H. simpl in H.
+    rewrite H4 in H. rewrite H5 in H. rewrite H6 in H.
+    destruct x2 eqn: E; destruct x3; destruct x4; inversion H; auto;
+    apply dupeEvalTypeMatchesCompileType with
+    srcIf D_type_Bool D_type_Int (DR_Bool b) (Succ C) in H0;
+    congruence.
+    all: unfold compile in H; simpl in H;
+    rewrite H4 in H; rewrite H5 in H; rewrite H6 in H;
+    destruct x2 eqn: E; inversion H.
+Qed.
 
 
 Lemma ifInt_ImpliesSource :
