@@ -1,16 +1,14 @@
 -R . eWacket
 
+
 src/language/definition.v
 src/language/eval.v
 src/language/properties.v
 
-
 src/utils.v
 src/wasmLite.v
 
-
 src/compiler.v
 src/helperTactics.v
+
 src/ewacket.v
-
-

@@ -117,17 +117,6 @@ Inductive wasmStepInd: wasmState -> wasmState -> Prop :=
     typeOfValue z = (W_DR_int,sz) ->
     (C,st) w--> (C', (testopOperation itestop z)::st')
 
-| W_ST_64IfTrue: forall C Ct Ce C' st z st',
-    C = (ifThenElse Ct Ce)::C' ->
-    st = (v_i64 z)::st' ->
-    ~(z = 0) ->
-    (C, st) w--> (Ct ++ C', st')
-| W_ST_64IfFalse: forall C Ct Ce C' st z st',
-    C = (ifThenElse Ct Ce)::C' ->
-    st = (v_i64 z)::st' ->
-    (z = 0) ->
-    (C, st) w--> (Ce ++ C', st')
-
 | W_ST_32IfTrue: forall C Ct Ce C' st z st',
     C = (ifThenElse Ct Ce)::C' ->
     st = (v_i32 z)::st' ->
