@@ -152,8 +152,10 @@ Proof.
     intros. generalize dependent C'. generalize dependent z.
     remember (C, x) as pre.
     remember (nil, y) as post.
-    induction H.
-    - 
+    induction H; intros.
+    - subst; inversion Heqpost; subst; removeListNils; assumption.
+    - eapply multi_step.
+        + 
 
 (*
     intros.
