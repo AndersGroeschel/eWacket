@@ -159,14 +159,39 @@ Proof.
             rewrite H1 in H. destruct x0; try discriminate.
 Qed.
 
+Ltac rememberDestruct H :=
+    remember H; destruct H.
+
+
 Lemma dupeEvalTypeMatchesCompileType:
 forall src d_type d_type' d_val cRes,
     src d==> (d_type, d_val) ->
-    compile_typed src = (d_type', cRes) ->
+    compile_typed src = (d_type', Succ cRes) ->
     d_type = d_type'.
 Proof.
-    Admitted.
-
+    induction src; intros;
+    try (simpl in *; inversion H; inversion H0; subst; reflexivity);
+    try (inversion H; subst; simpl in H0;
+        destruct (compile_typed src);
+        destruct d; destruct c; inversion H0; reflexivity).
+    simpl in H0.
+    destruct (compile_typed src1);
+    destruct (compile_typed src2);
+    destruct (compile_typed src3);
+    destruct d; destruct c;
+    destruct d0; destruct c0;
+    destruct d1; destruct c1; inversion H0;
+    inversion H; subst; repeat match goal with 
+    | IH: forall (d_type d_type' : dupeType) (d_val : dupeResult) (cRes : wasmCode),
+            ?src d==> (d_type, d_val) -> 
+            (?type1, Succ ?code) = (d_type', Succ cRes) -> _ ,
+        H: ?src d==> (?type2, ?value) |- _ =>
+        specialize (IH type2 type1 value code H)
+    | IH: ?a = ?a -> _ |- _ => 
+        let tmp := fresh "H" in 
+        assert (a = a) as tmp;[reflexivity | (specialize (IH tmp));clear tmp]
+    end; assumption.
+Qed.
 (* Lemma dupeEvalTypeMatchesCompileType :
 forall src b,
     src d==> (D_type_Bool, DR_Bool b) ->
