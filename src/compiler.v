@@ -227,7 +227,7 @@ Proof with auto.
     rewrite H4 in H. rewrite H5 in H. rewrite H6 in H.
     destruct x2 eqn: E; destruct x3; destruct x4; inversion H; auto;
     apply dupeEvalTypeMatchesCompileType with
-    srcIf D_type_Bool D_type_Int (DR_Bool b) (Succ C) in H0;
+    srcIf D_type_Bool D_type_Int (DR_Bool b) C in H0;
     congruence.
     all: unfold compile in H; simpl in H;
     rewrite H4 in H; rewrite H5 in H; rewrite H6 in H;
@@ -263,7 +263,7 @@ Proof with auto.
     rewrite H4 in H. rewrite H5 in H. rewrite H6 in H.
     destruct x2 eqn: E; destruct x3; destruct x4; inversion H; auto;
     apply dupeEvalTypeMatchesCompileType with
-    srcIf D_type_Int D_type_Bool (DR_Int z) (Succ C) in H0;
+    srcIf D_type_Int D_type_Bool (DR_Int z) C in H0;
     congruence.
     all: unfold compile in H; simpl in H;
     rewrite H4 in H; rewrite H5 in H; rewrite H6 in H;
